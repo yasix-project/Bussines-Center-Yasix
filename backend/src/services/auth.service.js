@@ -1,6 +1,6 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const prisma = require('../config/prisma');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const prisma = require("../config/prisma");
 
 const loginService = async (email, password) => {
   const user = await prisma.user.findUnique({
@@ -8,18 +8,18 @@ const loginService = async (email, password) => {
   });
 
   if (!user) {
-    throw new Error('Email atau password salah.');
+    throw new Error("Email atau password salah.");
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
-    throw new Error('Email atau password salah.');
+    throw new Error("Email atau password salah.");
   }
 
   const token = jwt.sign(
     { id: user.id, role: user.role, email: user.email },
     process.env.JWT_SECRET,
-    { expiresIn: '1d' }
+    { expiresIn: "1d" },
   );
 
   const { password: _, ...userData } = user;
@@ -36,7 +36,7 @@ const registerSiswaService = async (data) => {
   });
 
   if (existingUser) {
-    throw new Error('Email atau NIS sudah terdaftar.');
+    throw new Error("Email atau NIS sudah terdaftar.");
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -48,7 +48,7 @@ const registerSiswaService = async (data) => {
       name,
       email,
       password: hashedPassword,
-      role: 'SISWA',
+      role: "SISWA",
       qrCodeMember,
     },
   });

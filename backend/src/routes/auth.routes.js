@@ -1,15 +1,20 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-const { verifyToken, checkRole } = require('../middlewares/auth.middleware');
+const authController = require("../controllers/auth.controller");
+const { verifyToken, checkRole } = require("../middlewares/auth.middleware");
 
 // Public Route
-router.post('/login', authController.login);
+router.post("/login", authController.login);
 
 // Protected Route (Hanya Admin yang bisa daftarkan siswa baru)
-router.post('/register-siswa', verifyToken, checkRole('ADMIN'), authController.registerSiswa);
+router.post(
+  "/register-siswa",
+  verifyToken,
+  checkRole("ADMIN"),
+  authController.registerSiswa,
+);
 
 // Protected Route (Cek Profil Akun Aktif)
-router.get('/me', verifyToken, authController.getMe);
+router.get("/me", verifyToken, authController.getMe);
 
 module.exports = router;
