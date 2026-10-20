@@ -22,12 +22,6 @@ const getAllProductsService = async (query = {}) => {
     whereCondition.categoryId = categoryId;
   }
 
-  if (isLowStock === "true") {
-    whereCondition.stock = {
-      lte: prisma.product.fields.minStock,
-    };
-  }
-
   const products = await prisma.product.findMany({
     where: whereCondition,
     include: {
@@ -42,6 +36,10 @@ const getAllProductsService = async (query = {}) => {
       name: "asc",
     },
   });
+
+  if (isLowStock === "true") {
+    return products.filter((p) => p.stock <= p.minStock);
+  }
 
   return products;
 };
@@ -75,10 +73,8 @@ const createProductService = async (data) => {
     margin = 0,
     stock = 0,
     minStock = 5,
-    unit = "pcs",
   } = data;
 
-  // Cek apakah barcode sudah pernah dipakai (jika barcode diisi)
   if (barcode) {
     const existingProduct = await prisma.product.findUnique({
       where: { barcode },
@@ -88,7 +84,6 @@ const createProductService = async (data) => {
     }
   }
 
-  // Cek apakah kategori valid
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
   });
@@ -108,7 +103,6 @@ const createProductService = async (data) => {
       sellingPrice,
       stock: Number(stock),
       minStock: Number(minStock),
-      unit,
     },
     include: {
       category: true,
@@ -132,10 +126,14 @@ const updateProductService = async (id, data) => {
     data.margin !== undefined ? Number(data.margin) : product.margin;
   const sellingPrice = calculateSellingPrice(hpp, margin);
 
+  // Buang properti unit jika ada yang tidak sengaja mengirim via req.body
+  const updateData = { ...data };
+  delete updateData.unit;
+
   const updatedProduct = await prisma.product.update({
     where: { id },
     data: {
-      ...data,
+      ...updateData,
       hpp,
       margin,
       sellingPrice,
@@ -168,15 +166,13 @@ const deleteProductService = async (id) => {
 };
 
 const getLowStockAlertService = async () => {
-  const products = await prisma.$queryRaw`
-    SELECT p.id, p.name, p.stock, p.minStock, p.unit, c.name as categoryName
-    FROM Product p
-    JOIN Category c ON p.categoryId = c.id
-    WHERE p.stock <= p.minStock
-    ORDER BY p.stock ASC
-  `;
+  const products = await prisma.product.findMany({
+    include: {
+      category: true,
+    },
+  });
 
-  return products;
+  return products.filter((p) => p.stock <= p.minStock);
 };
 
 module.exports = {
