@@ -4,6 +4,7 @@ const prisma = require("../config/prisma");
 
 const authRoutes = require("./auth.routes");
 const productRoutes = require("./product.routes");
+const categoryRoutes = require("./category.routes");
 
 // Health Check
 router.get("/health", async (req, res) => {
@@ -34,8 +35,9 @@ router.get("/health", async (req, res) => {
   }
 });
 
-// Mounting Sub-Routers
+// Sub-Routers
 router.use("/auth", authRoutes);
 router.use("/products", productRoutes);
+router.use("/categories", categoryRoutes);
 
 module.exports = router;
