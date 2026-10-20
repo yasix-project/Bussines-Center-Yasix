@@ -1,0 +1,7 @@
+# Mengabaikan seluruh folder postman beserta isinya
+postman/
+.postman/
+
+# Mengabaikan file environment Postman yang berada di luar folder
+*.postman_environment.json
+*.postman_secret.json

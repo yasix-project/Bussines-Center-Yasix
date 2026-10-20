@@ -16,6 +16,7 @@ enum Role {
 enum CategoryType {
   ATK
   JASA_PRINT
+  KIK_PRODUCT
 }
 
 enum PrintColorType {

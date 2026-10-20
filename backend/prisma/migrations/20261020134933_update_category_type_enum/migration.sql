@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `categories` MODIFY `type` ENUM('ATK', 'JASA_PRINT', 'KIK_PRODUCT') NOT NULL DEFAULT 'ATK';
