@@ -7,6 +7,7 @@ const productRoutes = require("./product.routes");
 const categoryRoutes = require("./category.routes");
 const printRoutes = require("./print.routes");
 const transactionRoutes = require("./transaction.routes");
+const shiftRoutes = require('./shift.routes');
 
 // Health Check
 router.get("/health", async (req, res) => {
@@ -38,6 +39,8 @@ router.get("/health", async (req, res) => {
 });
 
 // Sub-Routers
+
+router.use('/shifts', shiftRoutes);
 router.use("/auth", authRoutes);
 router.use("/products", productRoutes);
 router.use("/categories", categoryRoutes);
