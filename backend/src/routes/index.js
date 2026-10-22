@@ -6,6 +6,7 @@ const authRoutes = require("./auth.routes");
 const productRoutes = require("./product.routes");
 const categoryRoutes = require("./category.routes");
 const printRoutes = require("./print.routes");
+const transactionRoutes = require("./transaction.routes");
 
 // Health Check
 router.get("/health", async (req, res) => {
@@ -41,6 +42,6 @@ router.use("/auth", authRoutes);
 router.use("/products", productRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/print", printRoutes);
-router.use("/print", printRoutes);
+router.use("/transactions", transactionRoutes);
 
 module.exports = router;
