@@ -27,4 +27,20 @@ router.get(
   transactionController.getTransactionById,
 );
 
+// Pre-order Mandiri Siswa
+router.post(
+  "/pre-order",
+  verifyToken,
+  checkRole("SISWA"),
+  transactionController.studentPreOrder,
+);
+
+// Pelunasan & Pick-up di Konter oleh Kasir/Admin
+router.patch(
+  "/:id/complete",
+  verifyToken,
+  checkRole("ADMIN", "KASIR"),
+  transactionController.completePreOrder,
+);
+
 module.exports = router;

@@ -55,7 +55,54 @@ const createVoucherService = async (data) => {
   });
 };
 
+// Penukaran Poin Siswa Menjadi Voucher Diskon (100 Poin = Diskon Rp10.000)
+const redeemPointsToVoucherService = async (studentId) => {
+  return await prisma.$transaction(async (tx) => {
+    const student = await tx.user.findUnique({ where: { id: studentId } });
+
+    if (!student || student.role !== "SISWA") {
+      throw new Error("Akun siswa tidak ditemukan.");
+    }
+
+    const REQUIRED_POINTS = 100;
+    if (student.points < REQUIRED_POINTS) {
+      throw new Error(
+        `Poin tidak cukup. Diperlukan minimal ${REQUIRED_POINTS} poin (Poin Anda: ${student.points}).`,
+      );
+    }
+
+    // Kurangi poin siswa
+    await tx.user.update({
+      where: { id: studentId },
+      data: { points: student.points - REQUIRED_POINTS },
+    });
+
+    // Buat kode voucher unik khusus siswa tersebut
+    const code = `REDEEM-${student.nis || "STU"}-${Date.now().toString().slice(-4)}`;
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + 30); // Berlaku 30 hari
+
+    const voucher = await tx.voucher.create({
+      data: {
+        code,
+        studentId,
+        discountPct: 0,
+        maxDiscount: 10000,
+        minPurchase: 20000,
+        validUntil,
+        isActive: true,
+      },
+    });
+
+    return {
+      voucher,
+      remainingPoints: student.points - REQUIRED_POINTS,
+    };
+  });
+};
+
 module.exports = {
   validateVoucherService,
   createVoucherService,
+  redeemPointsToVoucherService,
 };

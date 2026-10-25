@@ -6,6 +6,21 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 const mainRouter = require("./routes");
+const {
+  checkAndCancelExpiredOrders,
+} = require("./services/transaction.service");
+
+// Jalankan pengecekan pesanan kadaluwarsa setiap 5 menit (300.000 ms)
+setInterval(
+  async () => {
+    try {
+      await checkAndCancelExpiredOrders();
+    } catch (error) {
+      console.error("Gagal membatalkan pesanan kadaluwarsa:", error.message);
+    }
+  },
+  5 * 60 * 1000,
+);
 
 const app = express();
 

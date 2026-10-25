@@ -10,5 +10,11 @@ router.post(
   checkRole("ADMIN"),
   voucherController.createVoucher,
 );
+router.post(
+  "/redeem",
+  verifyToken,
+  checkRole("SISWA"),
+  voucherController.redeemPoints,
+);
 
 module.exports = router;

@@ -200,8 +200,184 @@ const getTransactionByIdService = async (transactionId) => {
   return transaction;
 };
 
+// Pre-Order Mandiri Siswa (Timeout 1 Jam)
+const studentPreOrderService = async (studentId, orderData) => {
+  const { voucherId, paymentMethod, items } = orderData;
+
+  return await prisma.$transaction(async (tx) => {
+    let subtotal = 0;
+    const transactionItemsData = [];
+
+    for (const item of items) {
+      if (item.productId) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+        if (!product || product.stock < item.quantity) {
+          throw new Error(
+            `Stok produk ${product?.name || ""} tidak mencukupi.`,
+          );
+        }
+
+        // Potong stok sementara
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: product.stock - item.quantity },
+        });
+
+        const itemSubtotal = Number(product.sellingPrice) * item.quantity;
+        subtotal += itemSubtotal;
+
+        transactionItemsData.push({
+          productId: product.id,
+          itemName: product.name,
+          price: product.sellingPrice,
+          quantity: item.quantity,
+          subtotal: itemSubtotal,
+        });
+      }
+    }
+
+    // Kalkulasi voucher
+    let discountAmount = 0;
+    if (voucherId) {
+      const voucher = await tx.voucher.findUnique({ where: { id: voucherId } });
+      if (
+        voucher &&
+        voucher.isActive &&
+        new Date(voucher.validUntil) >= new Date()
+      ) {
+        discountAmount = (subtotal * Number(voucher.discountPct)) / 100;
+        if (
+          voucher.maxDiscount &&
+          discountAmount > Number(voucher.maxDiscount)
+        ) {
+          discountAmount = Number(voucher.maxDiscount);
+        }
+      }
+    }
+
+    const totalAmount = subtotal - discountAmount;
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 Jam dari sekarang
+
+    const preOrder = await tx.transaction.create({
+      data: {
+        invoiceNumber: `ORD-${Date.now()}`,
+        studentId,
+        voucherId: voucherId || null,
+        subtotal,
+        discountAmount,
+        totalAmount,
+        paymentMethod: paymentMethod || "PAY_ON_PICKUP",
+        status: "BOOKED",
+        expiresAt,
+        items: { create: transactionItemsData },
+      },
+      include: { items: true },
+    });
+
+    return preOrder;
+  });
+};
+
+// Pengecekan & Restorasi Stok untuk Pesanan Kadaluwarsa (Auto Cancel 1 Jam)
+const checkAndCancelExpiredOrders = async () => {
+  const expiredTransactions = await prisma.transaction.findMany({
+    where: {
+      status: "BOOKED",
+      expiresAt: { lt: new Date() },
+    },
+    include: { items: true },
+  });
+
+  for (const tx of expiredTransactions) {
+    await prisma.$transaction(async (prismaTx) => {
+      // Kembalikan stok produk
+      for (const item of tx.items) {
+        if (item.productId) {
+          await prismaTx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+      }
+
+      // Ubah status ke CANCELLED
+      await prismaTx.transaction.update({
+        where: { id: tx.id },
+        data: { status: "CANCELLED" },
+      });
+    });
+  }
+};
+
+// Pelunasan & Pick-Up Pre-order Siswa oleh Kasir
+const completePreOrderService = async (
+  transactionId,
+  cashierId,
+  paymentData,
+) => {
+  const { payAmount, paymentMethod } = paymentData;
+
+  return await prisma.$transaction(async (tx) => {
+    const transaction = await tx.transaction.findUnique({
+      where: { id: transactionId },
+      include: { items: true },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaksi pre-order tidak ditemukan.");
+    }
+
+    if (transaction.status === "CANCELLED") {
+      throw new Error("Pesanan ini telah kadaluwarsa/dibatalkan.");
+    }
+
+    if (transaction.status === "COMPLETED") {
+      throw new Error("Pesanan ini sudah pernah diambil dan dilunasi.");
+    }
+
+    const totalAmount = Number(transaction.totalAmount);
+    const payAmountNum = Number(payAmount);
+
+    if (payAmountNum < totalAmount) {
+      throw new Error(`Pembayaran kurang. Total tagihan: Rp ${totalAmount}`);
+    }
+
+    const changeAmount = payAmountNum - totalAmount;
+
+    // Update status transaksi menjadi COMPLETED
+    const updatedTransaction = await tx.transaction.update({
+      where: { id: transactionId },
+      data: {
+        cashierId,
+        payAmount: payAmountNum,
+        changeAmount,
+        paymentMethod: paymentMethod || "CASH",
+        status: "COMPLETED",
+      },
+    });
+
+    // Tambah poin loyalty ke siswa jika terdaftar (1 Poin per Rp 10.000)
+    if (transaction.studentId) {
+      const earnedPoints = Math.floor(totalAmount / 10000);
+      if (earnedPoints > 0) {
+        await tx.user.update({
+          where: { id: transaction.studentId },
+          data: { points: { increment: earnedPoints } },
+        });
+      }
+    }
+
+    return updatedTransaction;
+  });
+};
+
 module.exports = {
   createTransactionService,
   getAllTransactionsService,
   getTransactionByIdService,
+  studentPreOrderService,
+  checkAndCancelExpiredOrders,
+  completePreOrderService,
 };

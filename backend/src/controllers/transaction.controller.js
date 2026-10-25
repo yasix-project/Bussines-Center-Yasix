@@ -53,8 +53,55 @@ const getTransactionById = async (req, res) => {
   }
 };
 
+const studentPreOrder = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const preOrder = await transactionService.studentPreOrderService(
+      studentId,
+      req.body,
+    );
+
+    return res.status(201).json({
+      status: "success",
+      message:
+        "Pre-order berhasil dibuat. Silakan ambil barang di Business Center dalam 1 jam.",
+      data: preOrder,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+const completePreOrder = async (req, res) => {
+  try {
+    const cashierId = req.user.id;
+    const { id } = req.params;
+    const completedOrder = await transactionService.completePreOrderService(
+      id,
+      cashierId,
+      req.body,
+    );
+
+    return res.status(200).json({
+      status: "success",
+      message: "Pesanan pre-order berhasil dilunasi dan diambil.",
+      data: completedOrder,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createTransaction,
   getAllTransactions,
   getTransactionById,
+  completePreOrder,
+  studentPreOrder,
 };
