@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #1c62c4;
+  --color-primary-hover: #1651a6;
+  --color-dark: #0f2b5b;
+  --color-accent: #ffc800;
+  --color-danger: #e52e2a;
+  --color-success: #10a352;
+
+  /* Palette Teks Cerah */
+  --color-bright: #f8fafc;
+  --color-sky: #e0f2fe;
+  --color-cyan: #38bdf8;
+
+  --font-sans: "Geist", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}

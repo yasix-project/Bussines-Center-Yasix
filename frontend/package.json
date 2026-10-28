@@ -9,14 +9,15 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "dependencies": {
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/geist-sans": "^5.3.0",
     "@hookform/resolvers": "^5.9.2",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.102.8",
+    "axios": "^1.20.0",
+    "date-fns": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.43.0",
     "pdfjs-dist": "^6.4.299",
@@ -27,6 +28,7 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.18.3",
     "react-to-print": "^3.3.0",
+    "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "zod": "^3.25.76",
     "zustand": "^5.0.15"
