@@ -1,24 +1,44 @@
-import axiosClient from "./axiosClient";
+// src/api/productService.js
+import axiosInstance from "./axiosClient";
+
+// Helper untuk mengubah JS Object menjadi FormData
+const buildFormData = (data) => {
+  const formData = new FormData();
+
+  Object.keys(data).forEach((key) => {
+    const value = data[key];
+
+    if (key === "image" && value instanceof File) {
+      // Append file binary untuk Multer (req.file)
+      formData.append("image", value);
+    } else if (value !== null && value !== undefined) {
+      formData.append(key, value);
+    }
+  });
+
+  return formData;
+};
 
 export const productService = {
-  // GET /api/v1/products
-  getAll: (params) => axiosClient.get("/products", { params }),
+  getAll: (params) => axiosInstance.get("/products", { params }),
 
-  // GET /api/v1/products/low-stock
-  getLowStock: () => axiosClient.get("/products/low-stock"),
+  getById: (id) => axiosInstance.get(`/products/${id}`),
 
-  // POST /api/v1/products
-  create: (data) => axiosClient.post("/products", data),
+  create: (data) => {
+    const formData = buildFormData(data);
+    return axiosInstance.post("/products", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
-  // PUT /api/v1/products/:id
-  update: (id, data) => axiosClient.put(`/products/${id}`, data),
+  update: (id, data) => {
+    const formData = buildFormData(data);
+    return axiosInstance.put(`/products/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
-  // DELETE /api/v1/products/:id
-  delete: (id) => axiosClient.delete(`/products/${id}`),
+  delete: (id) => axiosInstance.delete(`/products/${id}`),
 
-  // GET /api/v1/categories
-  getCategories: () => axiosClient.get("/categories"),
-
-  // POST /api/v1/categories
-  createCategory: (data) => axiosClient.post("/categories", data),
+  getCategories: () => axiosInstance.get("/categories"),
 };

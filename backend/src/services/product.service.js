@@ -3,7 +3,6 @@ const prisma = require("../config/prisma");
 const calculateSellingPrice = (hpp, margin) =>
   Math.ceil(Number((hpp + (hpp * margin) / 100).toFixed(2)));
 
-// Pakai harga jual dari request jika valid, kalau tidak hitung dari HPP & margin
 const resolveSellingPrice = (inputPrice, hpp, margin) => {
   const price = Number(inputPrice);
   if (
@@ -76,7 +75,7 @@ const getProductByIdService = async (id) => {
   return product;
 };
 
-const createProductService = async (data) => {
+const createProductService = async (data, file) => {
   const {
     barcode,
     name,
@@ -86,6 +85,8 @@ const createProductService = async (data) => {
     sellingPrice: inputPrice,
     stock = 0,
     minStock = 5,
+    isActive = true,
+    description,
   } = data;
 
   if (barcode) {
@@ -110,16 +111,24 @@ const createProductService = async (data) => {
     Number(margin),
   );
 
+  // Jika file diunggah, tentukan path URL-nya
+  const imageUrl = file
+    ? `/uploads/products/${file.filename}`
+    : data.imageUrl || null;
+
   const newProduct = await prisma.product.create({
     data: {
       barcode: barcode || null,
       name,
       categoryId,
+      description: description || null,
       hpp: Number(hpp),
       margin: Number(margin),
       sellingPrice,
       stock: Number(stock),
       minStock: Number(minStock),
+      isActive: Boolean(isActive === "true" || isActive === true),
+      imageUrl,
     },
     include: {
       category: true,
@@ -129,7 +138,7 @@ const createProductService = async (data) => {
   return newProduct;
 };
 
-const updateProductService = async (id, data) => {
+const updateProductService = async (id, data, file) => {
   const product = await prisma.product.findUnique({
     where: { id },
   });
@@ -144,6 +153,14 @@ const updateProductService = async (id, data) => {
   );
   const sellingPrice = resolveSellingPrice(data.sellingPrice, hpp, margin);
 
+  // Tentukan URL gambar baru (jika ada file diunggah), atau pertahankan yang lama
+  let imageUrl = product.imageUrl;
+  if (file) {
+    imageUrl = `/uploads/products/${file.filename}`;
+  } else if (data.imageUrl !== undefined) {
+    imageUrl = data.imageUrl;
+  }
+
   const updatedProduct = await prisma.product.update({
     where: { id },
     data: {
@@ -151,7 +168,10 @@ const updateProductService = async (id, data) => {
       ...(data.barcode !== undefined && { barcode: data.barcode || null }),
       ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
       ...(data.description !== undefined && { description: data.description }),
-      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+      ...(data.isActive !== undefined && {
+        isActive: Boolean(data.isActive === "true" || data.isActive === true),
+      }),
+      imageUrl,
       hpp,
       margin,
       sellingPrice,

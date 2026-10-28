@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product.controller");
 const { verifyToken, checkRole } = require("../middlewares/auth.middleware");
+const { uploadProductImage } = require("../middlewares/upload.middleware");
 
 // Public / Logged-in Users (Siswa, Kasir, Admin)
 router.get("/", verifyToken, productController.getProducts);
@@ -18,12 +19,14 @@ router.post(
   "/",
   verifyToken,
   checkRole("ADMIN"),
+  uploadProductImage.single("image"), // <-- Handler upload gambar
   productController.createProduct,
 );
 router.put(
   "/:id",
   verifyToken,
   checkRole("ADMIN"),
+  uploadProductImage.single("image"), // <-- Handler upload gambar
   productController.updateProduct,
 );
 router.delete(
