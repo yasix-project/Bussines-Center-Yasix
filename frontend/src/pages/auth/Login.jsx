@@ -15,6 +15,7 @@ import FeatureCard from "../../components/ui/FeatureCard";
 import LogoYadika from "../../assets/yadika-seeklogo.png";
 
 import { useAuthStore } from "../../store/authStore";
+import { authService } from "../../api/authService";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import Checkbox from "../../components/ui/Checkbox";
@@ -41,26 +42,36 @@ export default function Login() {
   const onLogin = async (data) => {
     setLoginError("");
     try {
-      await new Promise((res) => setTimeout(res, 1200));
+      // Panggil Endpoint Backend API v1 (/auth/login)
+      const response = await authService.login({
+        email: data.email,
+        password: data.password,
+      });
 
-      const role = data.email.includes("admin")
-        ? "ADMIN"
-        : data.email.includes("kasir")
-          ? "KASIR"
-          : "SISWA";
+      const resData = response.data?.data || response.data;
+      const { token, user } = resData;
 
-      loginAction(
-        { name: "Pengguna BC Yasix", email: data.email, role },
-        "token-123",
-      );
+      if (!token || !user) {
+        throw new Error("Respon dari server tidak valid.");
+      }
 
-      navigate(
-        role === "ADMIN" ? "/admin" : role === "KASIR" ? "/kasir" : "/siswa",
-      );
+      // Simpan User & Token ke Zustand Store
+      loginAction(user, token);
+
+      // Routing Otomatis Berdasarkan Role dari Backend
+      const userRole = user.role?.toUpperCase();
+      if (userRole === "ADMIN") {
+        navigate("/admin");
+      } else if (userRole === "KASIR") {
+        navigate("/kasir");
+      } else {
+        navigate("/siswa");
+      }
     } catch (err) {
-      setLoginError(
-        "Kredensial tidak valid. Silakan periksa kembali email dan kata sandi Anda.",
-      );
+      const errorMessage =
+        err.response?.data?.message ||
+        "Kredensial tidak valid. Silakan periksa kembali email dan kata sandi Anda.";
+      setLoginError(errorMessage);
     }
   };
 

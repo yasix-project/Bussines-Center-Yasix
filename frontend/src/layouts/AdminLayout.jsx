@@ -60,7 +60,7 @@ export default function AdminLayout() {
           <nav className="p-4 space-y-6">
             {navigationGroups.map((group) => (
               <div key={group.title}>
-                <p className="px-3 text-[10px] font-bold tracking-wider text-slate-400 mb-2 uppercase">
+                <p className="px-3 text-[10px] font-semibold tracking-wider text-slate-400 mb-2 uppercase">
                   {group.title}
                 </p>
                 <div className="space-y-1">
@@ -71,7 +71,7 @@ export default function AdminLayout() {
                       <Link
                         key={item.name}
                         to={item.path}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-normal transition-all ${
                           isActive
                             ? "bg-primary/10 text-primary"
                             : "text-slate-500 hover:bg-slate-50 hover:text-dark"

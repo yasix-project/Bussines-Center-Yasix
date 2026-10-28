@@ -5,7 +5,7 @@ import {
   ArrowUpRight,
   Calendar,
 } from "lucide-react";
-import StatCard from "../../components/admin/CategoryDonutChart";
+import StatCard from "../../components/admin/StatCard";
 import SalesBarChart from "../../components/admin/SalesBarChart";
 import CategoryDonutChart from "../../components/admin/CategoryDonutChart";
 

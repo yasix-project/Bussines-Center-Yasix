@@ -1,9 +1,21 @@
 const prisma = require("../config/prisma");
 
-// Helper kalkulasi harga jual berdasarkan HPP & Margin (%)
-const calculateSellingPrice = (hpp, margin) => {
-  const profit = hpp * (margin / 100);
-  return Math.ceil(hpp + profit); // Bulatkan ke atas
+const calculateSellingPrice = (hpp, margin) =>
+  Math.ceil(Number((hpp + (hpp * margin) / 100).toFixed(2)));
+
+// Pakai harga jual dari request jika valid, kalau tidak hitung dari HPP & margin
+const resolveSellingPrice = (inputPrice, hpp, margin) => {
+  const price = Number(inputPrice);
+  if (
+    inputPrice !== undefined &&
+    inputPrice !== null &&
+    inputPrice !== "" &&
+    Number.isFinite(price) &&
+    price > 0
+  ) {
+    return price;
+  }
+  return calculateSellingPrice(hpp, margin);
 };
 
 const getAllProductsService = async (query = {}) => {
@@ -71,6 +83,7 @@ const createProductService = async (data) => {
     categoryId,
     hpp,
     margin = 0,
+    sellingPrice: inputPrice,
     stock = 0,
     minStock = 5,
   } = data;
@@ -91,7 +104,11 @@ const createProductService = async (data) => {
     throw new Error("Kategori tidak ditemukan.");
   }
 
-  const sellingPrice = calculateSellingPrice(Number(hpp), Number(margin));
+  const sellingPrice = resolveSellingPrice(
+    inputPrice,
+    Number(hpp),
+    Number(margin),
+  );
 
   const newProduct = await prisma.product.create({
     data: {
@@ -121,19 +138,20 @@ const updateProductService = async (id, data) => {
     throw new Error("Produk tidak ditemukan.");
   }
 
-  const hpp = data.hpp !== undefined ? Number(data.hpp) : product.hpp;
-  const margin =
-    data.margin !== undefined ? Number(data.margin) : product.margin;
-  const sellingPrice = calculateSellingPrice(hpp, margin);
-
-  // Buang properti unit jika ada yang tidak sengaja mengirim via req.body
-  const updateData = { ...data };
-  delete updateData.unit;
+  const hpp = Number(data.hpp !== undefined ? data.hpp : product.hpp);
+  const margin = Number(
+    data.margin !== undefined ? data.margin : product.margin,
+  );
+  const sellingPrice = resolveSellingPrice(data.sellingPrice, hpp, margin);
 
   const updatedProduct = await prisma.product.update({
     where: { id },
     data: {
-      ...updateData,
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.barcode !== undefined && { barcode: data.barcode || null }),
+      ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
       hpp,
       margin,
       sellingPrice,
