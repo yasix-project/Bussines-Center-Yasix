@@ -41,4 +41,108 @@ const redeemPoints = async (req, res) => {
   }
 };
 
-module.exports = { validateVoucher, createVoucher, redeemPoints };
+// --- ENDPOINT BARU: GET ALL & GET BY ID ---
+const getAllVouchers = async (req, res) => {
+  try {
+    const vouchers = await voucherService.getAllVouchers();
+    res.status(200).json({
+      success: true,
+      message: "Berhasil mengambil data voucher",
+      data: vouchers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Terjadi kesalahan pada server",
+    });
+  }
+};
+
+const getVoucherById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const voucher = await voucherService.getVoucherById(id);
+
+    if (!voucher) {
+      return res.status(404).json({
+        success: false,
+        message: "Voucher tidak ditemukan.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: voucher,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Terjadi kesalahan pada server",
+    });
+  }
+};
+
+const updateVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Cek apakah voucher ada
+    const existing = await voucherService.getVoucherById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Voucher tidak ditemukan.",
+      });
+    }
+
+    const updatedVoucher = await voucherService.updateVoucher(id, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Voucher berhasil diperbarui.",
+      data: updatedVoucher,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Gagal memperbarui voucher.",
+    });
+  }
+};
+
+const deleteVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Cek apakah voucher ada
+    const existing = await voucherService.getVoucherById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Voucher tidak ditemukan.",
+      });
+    }
+
+    await voucherService.deleteVoucher(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Voucher berhasil dihapus.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Gagal menghapus voucher.",
+    });
+  }
+};
+
+module.exports = {
+  getAllVouchers,
+  getVoucherById,
+  createVoucher,
+  validateVoucher,
+  redeemPoints,
+  updateVoucher, // <-- Tambahkan ini
+  deleteVoucher, // <-- Tambahkan ini
+};

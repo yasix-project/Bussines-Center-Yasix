@@ -101,8 +101,75 @@ const redeemPointsToVoucherService = async (studentId) => {
   });
 };
 
+// --- ENDPOINT BARU: GET ALL & GET BY ID ---
+const getAllVouchers = async () => {
+  return await prisma.voucher.findMany({
+    orderBy: {
+      id: "desc",
+    },
+  });
+};
+
+const getVoucherById = async (id) => {
+  return await prisma.voucher.findUnique({
+    where: { id }, // Pastikan tipe data id sesuai schema (Int atau String UUID)
+  });
+};
+
+const updateVoucher = async (id, data) => {
+  // 1. Buat objek kosong untuk menampung data yang valid saja
+  const updatePayload = {};
+
+  // 2. Filter & Validasi setiap field
+  if (data.code) {
+    updatePayload.code = data.code;
+  }
+
+  if (data.discountPct !== undefined && data.discountPct !== null) {
+    updatePayload.discountPct = Number(data.discountPct);
+  }
+
+  if (data.maxDiscount !== undefined && data.maxDiscount !== null) {
+    updatePayload.maxDiscount = Number(data.maxDiscount);
+  }
+
+  if (data.minPurchase !== undefined && data.minPurchase !== null) {
+    updatePayload.minPurchase = Number(data.minPurchase);
+  }
+
+  // 3. Validasi Tanggal (Mencegah "Invalid Date")
+  if (data.validUntil) {
+    const parsedDate = new Date(data.validUntil);
+    // Cek apakah tanggal valid (bukan NaN)
+    if (!isNaN(parsedDate.getTime())) {
+      updatePayload.validUntil = parsedDate;
+    }
+  }
+
+  // 4. Update status aktif jika dikirim dari frontend
+  if (data.isActive !== undefined) {
+    updatePayload.isActive = data.isActive;
+  }
+
+  // 5. Eksekusi ke Prisma dengan payload yang sudah bersih
+  return await prisma.voucher.update({
+    where: { id },
+    data: updatePayload,
+  });
+};
+
+const deleteVoucher = async (id) => {
+  return await prisma.voucher.delete({
+    where: { id },
+  });
+};
+
 module.exports = {
+  getAllVouchers,
+  getVoucherById,
   validateVoucherService,
   createVoucherService,
   redeemPointsToVoucherService,
+  updateVoucher, // <-- Tambahkan ini
+  deleteVoucher, // <-- Tambahkan ini
 };

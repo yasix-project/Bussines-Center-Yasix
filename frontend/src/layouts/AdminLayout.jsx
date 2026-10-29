@@ -8,6 +8,7 @@ import {
   Settings,
   ChevronRight,
   FolderTree,
+  Ticket,
 } from "lucide-react";
 import LogoYadika from "../assets/yadika-seeklogo.png";
 import { useAuthStore } from "../store/authStore";
@@ -23,6 +24,7 @@ export default function AdminLayout() {
         { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
         { name: "Kelola Produk", path: "/admin/produk", icon: Package },
         { name: "Kelola Kategori", path: "/admin/kategori", icon: FolderTree },
+        { name: "Kelola Voucher", path: "/admin/voucher", icon: Ticket },
         { name: "Analitik", path: "/admin/analitik", icon: BarChart3 },
       ],
     },
