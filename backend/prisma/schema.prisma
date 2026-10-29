@@ -17,6 +17,8 @@ enum CategoryType {
   ATK
   JASA_PRINT
   KIK_PRODUCT
+  KEBUTUHAN_SISWA
+  LAINNYA
 }
 
 enum PrintColorType {
@@ -71,6 +73,7 @@ model User {
 model Category {
   id       String       @id @default(uuid())
   name     String
+  description String?      @db.Text
   type     CategoryType @default(ATK)
   products Product[]
 

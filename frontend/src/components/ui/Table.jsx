@@ -36,13 +36,13 @@ export default function Table({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200/80 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden max-w-6xl">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs whitespace-nowrap">
-          <thead className="bg-slate-800 text-slate-200 font-semibold border-b border-slate-700">
+          <thead className="bg-dark text-slate-200 font- border-b border-bright">
             <tr>
               {onSelectAll && onSelectRow && (
-                <th className="px-4 py-3 text-center w-10">
+                <th className="px-4 py-2 text-center w-8">
                   <input
                     type="checkbox"
                     checked={isAllSelected}
@@ -52,7 +52,7 @@ export default function Table({
                 </th>
               )}
               {columns.map((col, index) => (
-                <th key={index} className={`px-4 py-3 ${col.className || ""}`}>
+                <th key={index} className={`px-4 py-2 ${col.className || ""}`}>
                   {col.header}
                 </th>
               ))}
