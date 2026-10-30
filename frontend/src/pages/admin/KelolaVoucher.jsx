@@ -9,7 +9,7 @@ import {
   XCircle,
   Power,
   Ban,
-} from "lucide-react"; // <-- Tambah ikon Power dan Ban
+} from "lucide-react";
 
 import Button from "../../components/ui/Button";
 import Table from "../../components/ui/Table";
@@ -44,7 +44,7 @@ export default function KelolaVoucher() {
     },
   });
 
-  // 2. Mutations (Ditambah Toggle Active)
+  // 2. Mutations
   const saveMutation = useMutation({
     mutationFn: (data) =>
       editingVoucher
@@ -67,9 +67,21 @@ export default function KelolaVoucher() {
     },
   });
 
-  const bulkDeleteMutation = useMutation({
+  // Toggle Single Status
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, currentStatus }) =>
+      voucherService.toggleActive(id, currentStatus),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vouchers"] }),
+    onError: () => alert("Gagal mengubah status voucher."),
+  });
+
+  // Bulk Deactivate
+  const bulkDeactivateMutation = useMutation({
     mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => voucherService.delete(id)));
+      // Set isActive: false
+      await Promise.all(
+        ids.map((id) => voucherService.update(id, { isActive: false })),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vouchers"] });
@@ -77,24 +89,28 @@ export default function KelolaVoucher() {
     },
   });
 
-  // MUTATION BARU: Toggle Status Aktif/Nonaktif
-  const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, currentStatus }) =>
-      voucherService.toggleActive(id, currentStatus),
+  // Bulk Activate (FUNGSI BARU YANG DITAMBAHKAN)
+  const bulkActivateMutation = useMutation({
+    mutationFn: async (ids) => {
+      // Set isActive: true
+      await Promise.all(
+        ids.map((id) => voucherService.update(id, { isActive: true })),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vouchers"] });
+      setSelectedIds([]);
     },
-    onError: () => alert("Gagal mengubah status voucher."),
   });
 
-  // MUTATION BARU: Bulk Deactivate
-  const bulkDeactivateMutation = useMutation({
+  // Bulk Delete
+  const bulkDeleteMutation = useMutation({
     mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => voucherService.toggleActive(id, true)));
+      await Promise.all(ids.map((id) => voucherService.delete(id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setSelectedIds([]); // Bersihkan pilihan setelah update
+      setSelectedIds([]);
     },
   });
 
@@ -131,6 +147,16 @@ export default function KelolaVoucher() {
     }
   };
 
+  const handleBulkActivate = () => {
+    if (
+      window.confirm(
+        `Yakin ingin mengaktifkan kembali ${selectedIds.length} voucher terpilih?`,
+      )
+    ) {
+      bulkActivateMutation.mutate(selectedIds);
+    }
+  };
+
   const handleBulkDelete = () => {
     if (
       window.confirm(
@@ -141,7 +167,13 @@ export default function KelolaVoucher() {
     }
   };
 
-  // 4. Konfigurasi Kolom Tabel (Ditambah Tombol Power)
+  // LOGIKA KONSISTENSI SEPERTI DI PRODUK: Cek apakah semua yang dicentang berstatus NONAKTIF
+  const selectedVouchers = vouchers.filter((v) => selectedIds.includes(v.id));
+  const areAllInactive =
+    selectedVouchers.length > 0 &&
+    selectedVouchers.every((v) => v.isActive === false);
+
+  // 4. Konfigurasi Kolom Tabel
   const columns = [
     {
       header: "Kode Voucher",
@@ -203,7 +235,6 @@ export default function KelolaVoucher() {
       className: "text-center",
       render: (v) => (
         <div className="flex items-center justify-center gap-1">
-          {/* TOMBOL TOGGLE STATUS */}
           <button
             onClick={() => handleToggleStatus(v)}
             disabled={
@@ -245,6 +276,9 @@ export default function KelolaVoucher() {
       ),
     },
   ];
+
+  const isStatusLoading =
+    bulkActivateMutation.isPending || bulkDeactivateMutation.isPending;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
@@ -307,27 +341,45 @@ export default function KelolaVoucher() {
         }
       />
 
-      {/* BULK ACTION BAR DENGAN TOMBOL NONAKTIF MASSAL */}
+      {/* BULK ACTION BAR YANG DINAMIS (KONSISTEN DENGAN PRODUK) */}
       <BulkActionBar
         selectedCount={selectedIds.length}
         onClear={() => setSelectedIds([])}
         itemLabel="Voucher Terpilih"
       >
-        <Button
-          variant="amber"
-          size="xs"
-          onClick={handleBulkDeactivate}
-          isLoading={bulkDeactivateMutation.isPending}
-        >
-          <Ban size={14} /> Nonaktifkan Massal
-        </Button>
+        {areAllInactive ? (
+          <Button
+            variant="primary"
+            size="xs"
+            onClick={handleBulkActivate}
+            isLoading={isStatusLoading}
+            className="bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30 focus-visible:ring-emerald-300 active:scale-95"
+          >
+            {!isStatusLoading && <Power size={14} />}
+            Aktifkan Terpilih
+          </Button>
+        ) : (
+          <Button
+            variant="amber"
+            size="xs"
+            onClick={handleBulkDeactivate}
+            isLoading={isStatusLoading}
+            className="shadow-amber-900/30 focus-visible:ring-amber-300 active:scale-95"
+          >
+            {!isStatusLoading && <Ban size={14} />}
+            Nonaktifkan Terpilih
+          </Button>
+        )}
+
         <Button
           variant="danger"
           size="xs"
           onClick={handleBulkDelete}
           isLoading={bulkDeleteMutation.isPending}
+          className="shadow-red-900/30 focus-visible:ring-red-300 active:scale-95"
         >
-          <Trash2 size={14} /> Hapus Massal
+          {!bulkDeleteMutation.isPending && <Trash2 size={14} />}
+          Hapus Massal
         </Button>
       </BulkActionBar>
 
