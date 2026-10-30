@@ -18,6 +18,7 @@ import SiswaLayout from "./layouts/SiswaLayout";
 import KelolaProduk from "./pages/admin/KelolaProduk";
 import KelolaKategori from "./pages/admin/KelolaKategori";
 import KelolaVoucher from "./pages/admin/KelolaVoucher";
+import MonitoringShift from "./pages/admin/ShiftMonitoring";
 
 // Fallback Halaman 403
 const Unauthorized = () => (
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       {
         path: "voucher",
         element: <KelolaVoucher />,
+      },
+      {
+        path: "shift",
+        element: <MonitoringShift />,
       },
     ],
   },

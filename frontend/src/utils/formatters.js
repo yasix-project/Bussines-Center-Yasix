@@ -1,21 +1,30 @@
 // src/utils/formatters.js
 
-export const formatRupiah = (val) => {
-  const num = Number(val) || 0;
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(num);
-};
+// src/utils/formatters.js
 
 export const formatDate = (dateString) => {
   if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("id-ID", {
+
+  const date = new Date(dateString); // Otomatis mengubah UTC (Z) ke Local Time (WIB)
+
+  return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(date)
+    .replace(/\./g, ":"); // Mengganti pemisah jam dari titik ke titik dua
+};
+
+export const formatRupiah = (number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(number);
 };
 
 export const exportProductsToCSV = (products, selectedIds = []) => {

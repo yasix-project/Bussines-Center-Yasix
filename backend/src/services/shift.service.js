@@ -65,11 +65,28 @@ const getActiveShiftService = async (cashierId) => {
 };
 
 // 3. Tutup Shift Kasir (Rekap & Hitung Selisih)
-const endShiftService = async (cashierId, actualCash) => {
-  const activeShift = await getActiveShiftService(cashierId);
+const endShiftService = async (cashierId, actualCash, shiftId = null) => {
+  let activeShift;
 
-  if (!activeShift) {
-    throw new Error("Tidak ditemukan shift aktif untuk kasir ini.");
+  // Jika shiftId dikirim (Admin force close), cari shift berdasarkan ID tersebut
+  if (shiftId) {
+    activeShift = await prisma.cashierShift.findUnique({
+      where: { id: shiftId },
+    });
+
+    if (!activeShift || activeShift.endTime) {
+      throw new Error("Shift tidak ditemukan atau sudah ditutup.");
+    }
+
+    // Kita butuh kalkulasi expectedEndCash, panggil getActiveShiftService memakai cashierId milik shift tersebut
+    const calculatedShift = await getActiveShiftService(activeShift.cashierId);
+    activeShift.expectedEndCash = calculatedShift.expectedEndCash;
+  } else {
+    // Jika kasir menutup sendiri, cari shift aktif miliknya
+    activeShift = await getActiveShiftService(cashierId);
+    if (!activeShift) {
+      throw new Error("Tidak ditemukan shift aktif untuk kasir ini.");
+    }
   }
 
   const actualCashNum = parseFloat(actualCash);

@@ -55,7 +55,8 @@ const getActiveShift = async (req, res) => {
 const endShift = async (req, res) => {
   try {
     const cashierId = req.user.id;
-    const { actualCash } = req.body;
+    // PERUBAHAN: Ambil shiftId dari body
+    const { actualCash, shiftId } = req.body;
 
     if (actualCash === undefined || actualCash === null) {
       return res.status(400).json({
@@ -64,9 +65,11 @@ const endShift = async (req, res) => {
       });
     }
 
+    // PERUBAHAN: Kirim shiftId ke service sebagai parameter ketiga
     const closedShift = await shiftService.endShiftService(
       cashierId,
       actualCash,
+      shiftId,
     );
 
     return res.status(200).json({
