@@ -1,40 +1,43 @@
+import { useState } from "react"; // [BARU]
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
-  BarChart3,
-  Calendar,
   LogOut,
   Settings,
   ChevronRight,
+  ChevronsLeft, // [BARU]
+  ChevronsRight, // [BARU]
   FolderTree,
   Ticket,
   Clock,
 } from "lucide-react";
-import LogoYadika from "../assets/yadika-seeklogo.png";
+import BCYasixLogo from "../components/ui/BCYasixLogo"; // [BARU] menggantikan LogoYadika
 import { useAuthStore } from "../store/authStore";
 
 export default function AdminLayout() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const [collapsed, setCollapsed] = useState(false); // [BARU]
 
   const navigationGroups = [
     {
       title: "UTAMA",
-      items: [
-        { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
-        { name: "Kelola Produk", path: "/admin/produk", icon: Package },
-        { name: "Kelola Kategori", path: "/admin/kategori", icon: FolderTree },
-        { name: "Kelola Voucher", path: "/admin/voucher", icon: Ticket },
-        { name: "Monitoring Shift", path: "/admin/shift", icon: Clock },
-        { name: "Analitik", path: "/admin/analitik", icon: BarChart3 },
-      ],
+      items: [{ name: "Dashboard", path: "/admin", icon: LayoutDashboard }],
     },
     {
       title: "SISTEM & OPERASIONAL",
       items: [
-        { name: "Jadwal Piket", path: "/admin/piket", icon: Calendar },
-        { name: "Pengaturan", path: "/admin/settings", icon: Settings },
+        { name: "Kelola Produk", path: "/admin/produk", icon: Package },
+        { name: "Kelola Kategori", path: "/admin/kategori", icon: FolderTree },
+        { name: "Kelola Voucher", path: "/admin/voucher", icon: Ticket },
+        { name: "Monitoring Shift", path: "/admin/shift", icon: Clock },
+      ],
+    },
+    {
+      title: "PENGATURAN",
+      items: [
+        { name: "Pengaturan", path: "/admin/pengaturan", icon: Settings },
       ],
     },
   ];
@@ -47,28 +50,52 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen bg-bright font-sans antialiased text-slate-800">
       {/* Sidebar Minimalis */}
-      <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between hidden md:flex z-20">
+      <aside
+        className={`relative ${
+          collapsed ? "w-20" : "w-64"
+        } transition-all duration-300 bg-white border-r border-slate-200/80 flex flex-col justify-between hidden md:flex z-20`}
+      >
+        {/* [BARU] Tombol buka/tutup sidebar */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          className="absolute -right-3 top-8 w-6 h-6 flex items-center justify-center rounded-full bg-white text-slate-500 hover:text-primary border border-slate-200 shadow-sm z-30"
+          title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
+          aria-label={collapsed ? "Buka sidebar" : "Tutup sidebar"}
+        >
+          {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+        </button>
+
         <div>
-          {/* Top Brand & Logo Yadika */}
-          <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-            <img src={LogoYadika} alt="Logo Yadika" className="w-10 h-10" />
-            <div>
-              <h1 className="font-bold text-base text-dark tracking-tight leading-none">
-                BC-YASIX
-              </h1>
-              <p className="text-[11px] font-medium text-slate-400 mt-1">
-                SMK Yadika 6
-              </p>
-            </div>
+          {/* [BARU] Logo BC Yasix di atas */}
+          <div
+            className={`h-20 flex items-center border-b border-slate-100 ${
+              collapsed ? "justify-center" : "px-6"
+            }`}
+          >
+            {collapsed ? (
+              <BCYasixLogo variant="icon" theme="light" size={40} />
+            ) : (
+              <BCYasixLogo
+                variant="full"
+                theme="light"
+                size={40}
+                tagline={false}
+              />
+            )}
           </div>
 
           {/* Navigasi Terkelompok */}
           <nav className="p-4 space-y-6">
             {navigationGroups.map((group) => (
               <div key={group.title}>
-                <p className="px-3 text-[10px] font-semibold tracking-wider text-slate-400 mb-2 uppercase">
-                  {group.title}
-                </p>
+                {collapsed ? (
+                  <div className="mx-3 mb-2 border-t border-slate-200" />
+                ) : (
+                  <p className="px-3 text-[10px] font-semibold tracking-wider text-slate-400 mb-2 uppercase">
+                    {group.title}
+                  </p>
+                )}
                 <div className="space-y-1">
                   {group.items.map((item) => {
                     const isActive = location.pathname === item.path;
@@ -77,7 +104,10 @@ export default function AdminLayout() {
                       <Link
                         key={item.name}
                         to={item.path}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-normal transition-all ${
+                        title={collapsed ? item.name : undefined}
+                        className={`flex items-center ${
+                          collapsed ? "justify-center" : "justify-between"
+                        } px-3 py-2.5 rounded-xl text-sm font-normal transition-all ${
                           isActive
                             ? "bg-primary/10 text-primary"
                             : "text-slate-500 hover:bg-slate-50 hover:text-dark"
@@ -85,9 +115,9 @@ export default function AdminLayout() {
                       >
                         <div className="flex items-center gap-3">
                           <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                          <span>{item.name}</span>
+                          {!collapsed && <span>{item.name}</span>}
                         </div>
-                        {isActive && <ChevronRight size={14} />}
+                        {!collapsed && isActive && <ChevronRight size={14} />}
                       </Link>
                     );
                   })}
@@ -99,19 +129,28 @@ export default function AdminLayout() {
 
         {/* Profil Pengguna di Bawah Sidebar */}
         <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200/60">
+          <div
+            className={`flex items-center ${
+              collapsed ? "flex-col gap-2" : "justify-between"
+            } p-2.5 bg-slate-50 rounded-xl border border-slate-200/60`}
+          >
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-9 h-9 rounded-lg bg-primary text-white font-bold flex items-center justify-center shrink-0">
+              <div
+                className="w-9 h-9 rounded-lg bg-primary text-white font-bold flex items-center justify-center shrink-0"
+                title={collapsed ? user?.name || "Admin Manager" : undefined}
+              >
                 {user?.name?.charAt(0) || "A"}
               </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-dark truncate">
-                  {user?.name || "Admin Manager"}
-                </p>
-                <p className="text-[10px] text-slate-400 font-medium truncate">
-                  Administrator
-                </p>
-              </div>
+              {!collapsed && (
+                <div className="truncate">
+                  <p className="text-xs font-bold text-dark truncate">
+                    {user?.name || "Admin Manager"}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium truncate">
+                    Administrator
+                  </p>
+                </div>
+              )}
             </div>
 
             <button
@@ -127,12 +166,10 @@ export default function AdminLayout() {
 
       {/* Konten Utama */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header (Ikon Logo di Ponsel) */}
+        {/* Mobile Header (Logo di Ponsel) */}
         <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-6 md:hidden">
-          <div className="flex items-center gap-3">
-            <img src={LogoYadika} alt="Logo Yadika" className="w-8 h-8" />
-            <span className="font-bold text-dark">BC-YASIX</span>
-          </div>
+          {/* [BARU] logo BC Yasix menggantikan logo lama */}
+          <BCYasixLogo variant="full" theme="light" size={32} tagline={false} />
           <button
             onClick={handleLogout}
             className="text-xs font-semibold text-danger"

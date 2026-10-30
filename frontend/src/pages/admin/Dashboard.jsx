@@ -1,16 +1,23 @@
+// src/pages/admin/Dashboard.jsx
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Wallet,
   ShoppingCart,
   Users,
   ArrowUpRight,
-  Calendar,
+  Loader2,
 } from "lucide-react";
+
 import StatCard from "../../components/admin/StatCard";
 import SalesBarChart from "../../components/admin/SalesBarChart";
 import CategoryDonutChart from "../../components/admin/CategoryDonutChart";
 
-// Data Dummy Grafik Penjualan Harian
-const salesData = [
+import { analyticsService } from "../../api/analyticsService";
+import { formatRupiah } from "../../utils/formatters";
+
+// --- FALLBACK DUMMY DATA ---
+const dummySalesData = [
   { date: "1 Jul", pendapatan: 450000, keuntungan: 180000 },
   { date: "2 Jul", pendapatan: 620000, keuntungan: 250000 },
   { date: "3 Jul", pendapatan: 380000, keuntungan: 120000 },
@@ -20,17 +27,63 @@ const salesData = [
   { date: "7 Jul", pendapatan: 540000, keuntungan: 210000 },
 ];
 
-// Data Dummy Donut Chart Kategori
-const categoryData = [
-  { name: "Makanan ringan", value: 42, color: "#1C62C4" }, // Primary
-  { name: "Minuman", value: 28, color: "#38BDF8" }, // Cyan
-  { name: "ATK & Alat Tulis", value: 18, color: "#FFC800" }, // Accent Emas
-  { name: "Merchandise", value: 12, color: "#0F2B5B" }, // Dark
+const dummyCategoryData = [
+  { name: "Makanan ringan", value: 42, color: "#1C62C4" },
+  { name: "Minuman", value: 28, color: "#38BDF8" },
+  { name: "ATK & Alat Tulis", value: 18, color: "#FFC800" },
+  { name: "Merchandise", value: 12, color: "#0F2B5B" },
 ];
+// -----------------------------
 
 export default function Dashboard() {
+  const [dateFilter, setDateFilter] = useState("7days");
+
+  // Fetch API Dashboard (Metrik Utama & Kategori)
+  const { data: dashboardData, isLoading: isLoadingMetrics } = useQuery({
+    queryKey: ["analytics", "dashboard"],
+    queryFn: async () => {
+      const res = await analyticsService.getDashboardMetrics();
+      return res.data?.data || null;
+    },
+  });
+
+  // Fetch API Sales (Grafik Batang)
+  const { data: salesData, isLoading: isLoadingSales } = useQuery({
+    queryKey: ["analytics", "sales", dateFilter],
+    queryFn: async () => {
+      const res = await analyticsService.getSalesReport(dateFilter);
+      return res.data?.data || null;
+    },
+  });
+
+  // Pemetaan Data (Gunakan data asli jika ada, jika tidak pakai dummy)
+  const metrics = dashboardData?.metrics || {
+    totalPendapatan: 4610000,
+    totalTransaksi: 1136,
+    totalSiswa: 567,
+    labaBersih: 1800000,
+    trendPendapatan: 12.5,
+    trendTransaksi: -0.8,
+    trendSiswa: 4.2,
+    trendLaba: 8.1,
+  };
+
+  const chartSalesData = salesData || dummySalesData;
+  const chartCategoryData = dashboardData?.categoryData || dummyCategoryData;
+
+  const isLoading = isLoadingMetrics || isLoadingSales;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+        <Loader2 size={40} className="animate-spin text-primary mb-4" />
+        <p className="text-sm font-semibold">Memuat Data Analitik...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* Header Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -44,10 +97,15 @@ export default function Dashboard() {
 
         {/* Action Controls */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200/80 text-xs font-semibold text-slate-600 shadow-xs">
-            <Calendar size={14} className="text-slate-400" />
-            <span>7 Hari Terakhir</span>
-          </div>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bg-white px-3 py-2 rounded-xl border border-slate-200/80 text-xs font-semibold text-slate-600 shadow-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="7days">7 Hari Terakhir</option>
+            <option value="30days">30 Hari Terakhir</option>
+            <option value="thisMonth">Bulan Ini</option>
+          </select>
         </div>
       </div>
 
@@ -55,60 +113,58 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Pendapatan"
-          value="Rp 4.610.000"
+          value={formatRupiah(metrics.totalPendapatan)}
           icon={Wallet}
-          trend={12.5}
+          trend={metrics.trendPendapatan}
         />
         <StatCard
           title="Total Transaksi"
-          value="1.136"
+          value={metrics.totalTransaksi.toLocaleString("id-ID")}
           icon={ShoppingCart}
-          trend={-0.8}
+          trend={metrics.trendTransaksi}
         />
         <StatCard
           title="Siswa/Pelanggan"
-          value="567"
+          value={metrics.totalSiswa.toLocaleString("id-ID")}
           icon={Users}
-          trend={4.2}
+          trend={metrics.trendSiswa}
         />
         <StatCard
           title="Laba Bersih"
-          value="Rp 1.800.000"
+          value={formatRupiah(metrics.labaBersih)}
           icon={ArrowUpRight}
-          trend={8.1}
+          trend={metrics.trendLaba}
         />
       </div>
 
       {/* Row 2: Bar Chart Utama */}
-      <SalesBarChart data={salesData} />
+      <SalesBarChart data={chartSalesData} />
 
       {/* Row 3: Donut Chart & Ringkasan Penjualan */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <CategoryDonutChart data={categoryData} />
+          <CategoryDonutChart data={chartCategoryData} />
         </div>
 
         {/* Quick Info Card */}
-        <div className="bg-gradient-to-br from-dark to-primary rounded-2xl p-6 text-white flex flex-col justify-between relative overflow-hidden shadow-sm">
+        <div className="bg-linear-to-br from-dark to-primary rounded-2xl p-6 text-white flex flex-col justify-between relative overflow-hidden shadow-sm">
           <div className="relative z-10 space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-full text-cyan border border-white/10">
-              Pemberitahuan
+              Informasi Aktif
             </span>
             <h3 className="text-lg font-bold text-white pt-2">
-              Piket Kasir Hari Ini
+              Status Operasional
             </h3>
-            <p className="text-xs text-sky leading-relaxed">
-              Tim piket shift 1: <br />
-              <strong className="text-white">
-                Ahmad Rizky (XII TJKT 3)
-              </strong> &{" "}
-              <strong className="text-white">Siti Nur (XI AKL 1)</strong>
+            <p className="text-xs text-blue-100 leading-relaxed">
+              Business Center SMK Yadika 6 saat ini beroperasi dengan baik.
+              Pantau terus grafik penjualan untuk melihat performa HPP dan Laba
+              secara aktual.
             </p>
           </div>
 
           <div className="relative z-10 pt-6">
             <button className="w-full py-2.5 bg-accent text-dark text-xs font-bold rounded-xl hover:bg-yellow-400 transition-colors shadow-sm">
-              Cek Jadwal Piket Lengkap
+              Unduh Laporan Lengkap (.CSV)
             </button>
           </div>
         </div>
