@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import FeatureCard from "../../components/ui/FeatureCard";
+import BCYasixLogo from "../../components/ui/BCYasixLogo";
 import LogoYadika from "../../assets/yadika-seeklogo.png";
 
 import { useAuthStore } from "../../store/authStore";
@@ -78,7 +79,7 @@ export default function Login() {
   return (
     <div className="relative min-h-screen bg-slate-100 flex items-center justify-center p-4 md:p-6 font-sans overflow-hidden">
       {/* Glow ambient background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-137.5 h-137.5 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-137.5 h-137.5 bg-primary-gradient rounded-full blur-3xl pointer-events-none" />
 
       {/* Kontainer Utama */}
       <main className="relative z-10 max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200/80">
@@ -87,21 +88,27 @@ export default function Login() {
           {/* Watermark Logo Yadika di Pojok Kanan Bawah Hero */}
           <img
             src={LogoYadika}
-            alt="Logo Yadika Watermark"
-            className="absolute -bottom-10 -right-10 w-80 opacity-10 pointer-events-none select-none"
+            alt=""
+            aria-hidden="true"
+            className="absolute -bottom-10 -right-10 w-80 opacity-[0.06] pointer-events-none select-none"
           />
 
           <div className="space-y-8 relative z-10">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-full px-4 py-1.5 text-xs font-semibold text-highlight shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-highlight animate-pulse" />
-              Portal Resmi BC Yasix v2.4
+            {/* Logo utama BC Yasix (versi gelap) + badge versi */}
+            <div className="flex items-center justify-between gap-3">
+              <BCYasixLogo variant="full" theme="dark" size={44} />
+              <span className="bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-highlight">
+                v2.4
+              </span>
             </div>
 
             {/* Headline */}
             <div className="space-y-3">
               <h1 className="text-3xl lg:text-4xl font-bold leading-tight tracking-tight text-white">
-                Akses Cerdas & Terpadu Bersama BC Yasix
+                Akses Cerdas & Terpadu Bersama{" "}
+                <span className="text-blue-300/90 ">
+                  BC <span className="text-blue-500">Yasix</span>
+                </span>
               </h1>
               <p className="text-blue-100/75 text-sm leading-relaxed pr-2">
                 Platform manajemen dan koordinasi terpusat dengan sistem
@@ -141,13 +148,11 @@ export default function Login() {
         <section className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-white relative">
           {/* Header Form */}
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-md p-2 shrink-0">
-              <img
-                src={LogoYadika}
-                alt="Logo Yadika"
-                className="h-full w-auto object-contain transition-transform duration-300 hover:scale-105"
-              />
-            </div>
+            <BCYasixLogo
+              variant="icon"
+              size={56}
+              className="shrink-0 transition-transform duration-300 hover:scale-105"
+            />
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-dark">
                 Masuk ke Akun

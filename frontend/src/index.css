@@ -7,7 +7,11 @@
   --color-accent: #ffc800;
   --color-danger: #e52e2a;
   --color-success: #10a352;
-
+  --background-image-primary-gradient: linear-gradient(
+    90deg,
+    rgba(28, 98, 196, 1) 0%,
+    rgba(22, 81, 166, 1) 95%
+  );
   /* Palette Teks Cerah */
   --color-bright: #f8fafc;
   --color-sky: #e0f2fe;
