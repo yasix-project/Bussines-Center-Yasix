@@ -1,6 +1,5 @@
 // src/pages/admin/Pengaturan.jsx
 import { useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +7,7 @@ import { User, Award, Save, Loader2, CheckCircle2 } from "lucide-react";
 
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { authService } from "../../api/authService";
+import { useProfile, useProfileMutations } from "../../hooks/useProfile";
 
 // Schema Validasi Zod
 const profileSchema = z.object({
@@ -23,21 +22,13 @@ const profileSchema = z.object({
 });
 
 export default function Pengaturan() {
-  const queryClient = useQueryClient();
-
   // 1. Fetch Data User Aktif dari /me
   const {
     data: user,
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["currentUser"],
-    queryFn: async () => {
-      const response = await authService.getMe();
-      return response.data?.data || response.data;
-    },
-  });
+  } = useProfile();
 
   const {
     register,
@@ -65,30 +56,22 @@ export default function Pengaturan() {
   }, [user, reset]);
 
   // 2. Mutation Update Profile
-  const updateProfileMutation = useMutation({
-    mutationFn: (formData) => {
-      // Hapus password jika tidak diisi pengguna
-      const payload = { ...formData };
-      if (!payload.password) delete payload.password;
-      return authService.updateProfile(payload);
-    },
-    onSuccess: (res) => {
-      alert("Profil berhasil diperbarui!");
-      // Invalidate query me agar header/sidebar otomatis mendapat nama terbaru
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-      reset({
-        name: res.data?.data?.name || user.name,
-        email: res.data?.data?.email || user.email,
-        password: "",
-      });
-    },
-    onError: (err) => {
-      alert(err.response?.data?.message || "Gagal memperbarui profil.");
-    },
-  });
+  const { update } = useProfileMutations();
 
   const handleFormSubmit = (data) => {
-    updateProfileMutation.mutate(data);
+    update.mutate(data, {
+      onSuccess: (res) => {
+        alert("Profil berhasil diperbarui!");
+        reset({
+          name: res.data?.data?.name || user.name,
+          email: res.data?.data?.email || user.email,
+          password: "",
+        });
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || "Gagal memperbarui profil.");
+      },
+    });
   };
 
   if (isLoading) {
@@ -216,7 +199,7 @@ export default function Pengaturan() {
             <div className="flex justify-end pt-4 border-t border-slate-100">
               <Button
                 type="submit"
-                isLoading={isSubmitting || updateProfileMutation.isPending}
+                isLoading={isSubmitting || update.isPending}
               >
                 <Save size={16} /> Simpan Perubahan
               </Button>
