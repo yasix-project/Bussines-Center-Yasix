@@ -62,11 +62,12 @@ export function EndShiftModal({
   onClose,
   onSubmitData,
   systemExpectedCash = 0,
+  isSubmitting = false,
 }) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
     reset,
   } = useForm({
     resolver: zodResolver(endShiftSchema),
@@ -105,7 +106,11 @@ export function EndShiftModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" variant="danger" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            variant="danger"
+            isLoading={isFormSubmitting || isSubmitting}
+          >
             Akhiri Shift
           </Button>
         </div>

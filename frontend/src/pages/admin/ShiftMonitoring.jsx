@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Clock,
@@ -13,11 +12,10 @@ import Table from "../../components/ui/Table";
 import FilterBar from "../../components/ui/FilterBar";
 import { EndShiftModal } from "../../components/admin/ShiftModals";
 
-import { shiftService } from "../../api/shiftService";
+import { useShiftMutations, useShifts } from "../../hooks/useShifts";
 import { formatRupiah, formatDate } from "../../utils/formatters";
 
 export default function MonitoringShift() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
   const [selectedActiveShift, setSelectedActiveShift] = useState(null);
@@ -28,31 +26,14 @@ export default function MonitoringShift() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["shifts"],
-    queryFn: async () => {
-      const response = await shiftService.getAllShifts();
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data || [];
-    },
-  });
+  } = useShifts();
 
   // Pisahkan: Aktif (endTime null) dan Selesai
   const activeShifts = allShifts.filter((s) => !s.endTime);
   const historyShifts = allShifts.filter((s) => s.endTime);
 
   // 2. Mutation Tutup Shift Paksa
-  const endShiftMutation = useMutation({
-    mutationFn: (data) => shiftService.endShift(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shifts"] });
-      setIsEndModalOpen(false);
-      setSelectedActiveShift(null);
-    },
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal menutup shift kasir."),
-  });
+  const { endShift } = useShiftMutations();
 
   // 3. Handlers
   const handleForceClose = (shiftData) => {
@@ -65,7 +46,15 @@ export default function MonitoringShift() {
       ...data,
       shiftId: selectedActiveShift?.id, // Payload untuk Admin Force Close
     };
-    endShiftMutation.mutate(payload, { onSuccess: () => resetForm() });
+    endShift.mutate(payload, {
+      onSuccess: () => {
+        setIsEndModalOpen(false);
+        setSelectedActiveShift(null);
+        resetForm();
+      },
+      onError: (err) =>
+        alert(err.response?.data?.message || "Gagal menutup shift kasir."),
+    });
   };
 
   const filteredHistory = historyShifts.filter((s) =>
@@ -231,7 +220,7 @@ export default function MonitoringShift() {
           keyField="id"
           isLoading={isLoading}
           isError={isError}
-          errorMessage={error?.message}
+          errorMessage={error?.response?.data?.message || error?.message}
           emptyMessage="Belum ada riwayat shift."
         />
       </div>
@@ -244,6 +233,7 @@ export default function MonitoringShift() {
         }}
         onSubmitData={submitEndShift}
         systemExpectedCash={selectedActiveShift?.expectedEndCash || 0}
+        isSubmitting={endShift.isPending}
       />
     </div>
   );
