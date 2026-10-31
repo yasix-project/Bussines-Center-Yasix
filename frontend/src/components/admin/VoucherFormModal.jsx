@@ -29,12 +29,13 @@ export default function VoucherFormModal({
   onClose,
   onSubmitData,
   initialData = null,
+  isSubmitting = false,
 }) {
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm({
     resolver: zodResolver(voucherSchema),
   });
@@ -141,7 +142,10 @@ export default function VoucherFormModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isFormSubmitting || isSubmitting}
+          >
             Simpan Voucher
           </Button>
         </div>

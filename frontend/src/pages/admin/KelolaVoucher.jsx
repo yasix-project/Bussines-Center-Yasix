@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Edit3,
@@ -18,11 +17,10 @@ import BulkActionBar from "../../components/ui/BulkActionBar";
 import StatCard from "../../components/admin/StatCard";
 import VoucherFormModal from "../../components/admin/VoucherFormModal";
 
-import { voucherService } from "../../api/voucherService";
+import { useVoucherMutations, useVouchers } from "../../hooks/useVouchers";
 import { formatRupiah, formatDate } from "../../utils/formatters";
 
 export default function KelolaVoucher() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,85 +32,31 @@ export default function KelolaVoucher() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["vouchers"],
-    queryFn: async () => {
-      const response = await voucherService.getAll();
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data || [];
-    },
-  });
+  } = useVouchers();
 
   // 2. Mutations
-  const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editingVoucher
-        ? voucherService.update(editingVoucher.id, data)
-        : voucherService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setIsModalOpen(false);
-      setEditingVoucher(null);
-    },
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal menyimpan voucher."),
-  });
+  const {
+    save,
+    remove,
+    bulkRemove,
+    toggleStatus,
+    bulkActivate,
+    bulkDeactivate,
+  } = useVoucherMutations();
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => voucherService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    },
-  });
-
-  // Toggle Single Status
-  const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, currentStatus }) =>
-      voucherService.toggleActive(id, currentStatus),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vouchers"] }),
-    onError: () => alert("Gagal mengubah status voucher."),
-  });
-
-  // Bulk Deactivate
-  const bulkDeactivateMutation = useMutation({
-    mutationFn: async (ids) => {
-      // Set isActive: false
-      await Promise.all(
-        ids.map((id) => voucherService.update(id, { isActive: false })),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setSelectedIds([]);
-    },
-  });
-
-  // Bulk Activate (FUNGSI BARU YANG DITAMBAHKAN)
-  const bulkActivateMutation = useMutation({
-    mutationFn: async (ids) => {
-      // Set isActive: true
-      await Promise.all(
-        ids.map((id) => voucherService.update(id, { isActive: true })),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setSelectedIds([]);
-    },
-  });
-
-  // Bulk Delete
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => voucherService.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vouchers"] });
-      setSelectedIds([]);
-    },
-  });
+  const handleSave = (data) => {
+    save.mutate(
+      { id: editingVoucher?.id, data },
+      {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          setEditingVoucher(null);
+        },
+        onError: (err) =>
+          alert(err.response?.data?.message || "Gagal menyimpan voucher."),
+      },
+    );
+  };
 
   // 3. Filters & Handlers
   const filteredData = vouchers.filter((v) =>
@@ -131,10 +75,10 @@ export default function KelolaVoucher() {
     );
 
   const handleToggleStatus = (voucher) => {
-    toggleStatusMutation.mutate({
-      id: voucher.id,
-      currentStatus: voucher.isActive,
-    });
+    toggleStatus.mutate(
+      { id: voucher.id, currentStatus: voucher.isActive },
+      { onError: () => alert("Gagal mengubah status voucher.") },
+    );
   };
 
   const handleBulkDeactivate = () => {
@@ -143,7 +87,9 @@ export default function KelolaVoucher() {
         `Yakin ingin menonaktifkan ${selectedIds.length} voucher terpilih?`,
       )
     ) {
-      bulkDeactivateMutation.mutate(selectedIds);
+      bulkDeactivate.mutate(selectedIds, {
+        onSuccess: () => setSelectedIds([]),
+      });
     }
   };
 
@@ -153,7 +99,9 @@ export default function KelolaVoucher() {
         `Yakin ingin mengaktifkan kembali ${selectedIds.length} voucher terpilih?`,
       )
     ) {
-      bulkActivateMutation.mutate(selectedIds);
+      bulkActivate.mutate(selectedIds, {
+        onSuccess: () => setSelectedIds([]),
+      });
     }
   };
 
@@ -163,7 +111,14 @@ export default function KelolaVoucher() {
         `Hapus ${selectedIds.length} voucher terpilih secara permanen?`,
       )
     ) {
-      bulkDeleteMutation.mutate(selectedIds);
+      bulkRemove.mutate(selectedIds, {
+        onSuccess: (failedIds) => {
+          setSelectedIds(failedIds);
+          if (failedIds.length > 0) {
+            alert(`${failedIds.length} voucher gagal dihapus.`);
+          }
+        },
+      });
     }
   };
 
@@ -238,8 +193,8 @@ export default function KelolaVoucher() {
           <button
             onClick={() => handleToggleStatus(v)}
             disabled={
-              toggleStatusMutation.isPending &&
-              toggleStatusMutation.variables?.id === v.id
+              toggleStatus.isPending &&
+              toggleStatus.variables?.id === v.id
             }
             className={`p-1.5 rounded transition-colors ${
               !v.isActive
@@ -265,7 +220,12 @@ export default function KelolaVoucher() {
           <button
             onClick={() => {
               if (window.confirm("Yakin ingin menghapus voucher ini?"))
-                deleteMutation.mutate(v.id);
+                remove.mutate(v.id, {
+                  onSuccess: (_data, id) =>
+                    setSelectedIds((prev) =>
+                      prev.filter((item) => item !== id),
+                    ),
+                });
             }}
             className="p-1.5 text-slate-400 hover:text-danger hover:bg-danger/10 rounded transition-colors"
             title="Hapus"
@@ -278,7 +238,7 @@ export default function KelolaVoucher() {
   ];
 
   const isStatusLoading =
-    bulkActivateMutation.isPending || bulkDeactivateMutation.isPending;
+    bulkActivate.isPending || bulkDeactivate.isPending;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
@@ -329,7 +289,7 @@ export default function KelolaVoucher() {
         keyField="id"
         isLoading={isLoading}
         isError={isError}
-        errorMessage={error?.message}
+        errorMessage={error?.response?.data?.message || error?.message}
         emptyMessage="Tidak ada data voucher."
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
@@ -375,10 +335,10 @@ export default function KelolaVoucher() {
           variant="danger"
           size="xs"
           onClick={handleBulkDelete}
-          isLoading={bulkDeleteMutation.isPending}
+          isLoading={bulkRemove.isPending}
           className="shadow-red-900/30 focus-visible:ring-red-300 active:scale-95"
         >
-          {!bulkDeleteMutation.isPending && <Trash2 size={14} />}
+          {!bulkRemove.isPending && <Trash2 size={14} />}
           Hapus Massal
         </Button>
       </BulkActionBar>
@@ -386,8 +346,9 @@ export default function KelolaVoucher() {
       <VoucherFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmitData={saveMutation.mutate}
+        onSubmitData={handleSave}
         initialData={editingVoucher}
+        isSubmitting={save.isPending}
       />
     </div>
   );
