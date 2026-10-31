@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
 import {
   ShieldCheck,
   Server,
@@ -15,10 +14,10 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { authService } from "../../api/authService";
 import BCYasixLogo from "../../components/ui/BcYasixLogo";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import { useAuthMutations } from "../../hooks/useAuth";
 
 // Skema Validasi Login Umum
 const loginSchema = z.object({
@@ -29,6 +28,7 @@ const loginSchema = z.object({
 export default function Login() {
   const navigate = useNavigate();
   const [loginError, setLoginError] = useState("");
+  const { login } = useAuthMutations();
 
   const {
     register,
@@ -36,36 +36,30 @@ export default function Login() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
-  const loginMutation = useMutation({
-    mutationFn: (data) => authService.login(data), // Menggunakan endpoint login umum
-    onSuccess: (res) => {
-      const { token, user } = res.data.data;
-
-      // Simpan token ke localStorage (atau Zustand sesuai kebutuhanmu)
-      localStorage.setItem("accessToken", token);
-      sessionStorage.setItem("userRole", user.role);
-
-      // Routing Otomatis Berdasarkan Role
-      const userRole = user.role?.toUpperCase();
-      if (userRole === "ADMIN") {
-        navigate("/admin");
-      } else if (userRole === "KASIR") {
-        navigate("/kasir");
-      } else {
-        navigate("/siswa");
-      }
-    },
-    onError: (err) => {
-      const errorMessage =
-        err.response?.data?.message ||
-        "Kredensial tidak valid atau koneksi ke server gagal.";
-      setLoginError(errorMessage);
-    },
-  });
-
   const onLogin = (data) => {
     setLoginError("");
-    loginMutation.mutate(data);
+    login.mutate(data, {
+      onSuccess: (res) => {
+        const { token, user } = res.data.data;
+        localStorage.setItem("accessToken", token);
+        sessionStorage.setItem("userRole", user.role);
+
+        const userRole = user.role?.toUpperCase();
+        if (userRole === "ADMIN") {
+          navigate("/admin");
+        } else if (userRole === "KASIR") {
+          navigate("/kasir");
+        } else {
+          navigate("/siswa");
+        }
+      },
+      onError: (err) => {
+        const errorMessage =
+          err.response?.data?.message ||
+          "Kredensial tidak valid atau koneksi ke server gagal.";
+        setLoginError(errorMessage);
+      },
+    });
   };
 
   return (
@@ -241,9 +235,9 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full py-3.5 mt-8 text-base rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 transition-all font-bold border border-blue-500/50"
-              isLoading={isSubmitting || loginMutation.isPending}
+              isLoading={isSubmitting || login.isPending}
             >
-              {isSubmitting || loginMutation.isPending ? (
+              {isSubmitting || login.isPending ? (
                 <>
                   <Loader2 size={18} className="animate-spin mr-2" />
                   Memverifikasi...
