@@ -1,6 +1,5 @@
 // src/pages/admin/KelolaSiswa.jsx
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit3, Trash2, Users, Award, QrCode } from "lucide-react";
 
 import Button from "../../components/ui/Button";
@@ -10,15 +9,27 @@ import StatCard from "../../components/admin/StatCard";
 import StudentFormModal from "../../components/admin/StudentFormModal";
 import FloatingBulkBar from "../../components/admin/FloatingBulkBar";
 
-import { studentService } from "../../api/studentService";
+import useDebounce from "../../hooks/useDebounce";
+import { useStudentMutations, useStudents } from "../../hooks/useStudents";
 import { formatDate } from "../../utils/formatters";
 
 export default function KelolaSiswa() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selection, setSelection] = useState({ search: "", ids: [] });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const debouncedSearch = useDebounce(searchQuery);
+  const selectedIds =
+    selection.search === debouncedSearch ? selection.ids : [];
+  const updateSelectedIds = (updater) => {
+    setSelection(({ search, ids }) => {
+      const currentIds = search === debouncedSearch ? ids : [];
+      return {
+        search: debouncedSearch,
+        ids: typeof updater === "function" ? updater(currentIds) : updater,
+      };
+    });
+  };
 
   // 1. Fetch Data Siswa
   const {
@@ -26,59 +37,35 @@ export default function KelolaSiswa() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["students", searchQuery],
-    queryFn: async () => {
-      const response = await studentService.getAll({ search: searchQuery });
-      return response.data;
-    },
-  });
+  } = useStudents({ search: debouncedSearch });
 
   const students = studentsData?.data || [];
   const totalStudents = studentsData?.pagination?.totalData || students.length;
 
   // 2. Mutations
-  const saveMutation = useMutation({
-    mutationFn: (formData) =>
-      editingStudent
-        ? studentService.update(editingStudent.id, formData)
-        : studentService.create(formData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      setIsModalOpen(false);
-      setEditingStudent(null);
-    },
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal menyimpan data siswa."),
-  });
+  const { save, remove, bulkRemove } = useStudentMutations();
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => studentService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    },
-    onError: () => alert("Gagal menghapus data siswa."),
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => studentService.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      setSelectedIds([]);
-    },
-    onError: () => alert("Sebagian atau seluruh data siswa gagal dihapus."),
-  });
+  const handleSave = (data) => {
+    save.mutate(
+      { id: editingStudent?.id, data },
+      {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          setEditingStudent(null);
+        },
+        onError: (err) =>
+          alert(err.response?.data?.message || "Gagal menyimpan data siswa."),
+      },
+    );
+  };
 
   // 3. Selection Handlers
   const handleSelectAll = (e) => {
-    setSelectedIds(e.target.checked ? students.map((s) => s.id) : []);
+    updateSelectedIds(e.target.checked ? students.map((s) => s.id) : []);
   };
 
   const handleSelectRow = (id) => {
-    setSelectedIds((prev) =>
+    updateSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
@@ -89,7 +76,15 @@ export default function KelolaSiswa() {
         `Apakah Anda yakin ingin menghapus ${selectedIds.length} data siswa terpilih?`,
       )
     ) {
-      bulkDeleteMutation.mutate(selectedIds);
+      bulkRemove.mutate(selectedIds, {
+        onSuccess: (failedIds) => {
+          updateSelectedIds(failedIds);
+          if (failedIds.length > 0) {
+            alert(`${failedIds.length} data siswa gagal dihapus.`);
+          }
+        },
+        onError: () => alert("Sebagian atau seluruh data siswa gagal dihapus."),
+      });
     }
   };
 
@@ -157,7 +152,13 @@ export default function KelolaSiswa() {
           <button
             onClick={() => {
               if (window.confirm(`Hapus data siswa "${s.name}"?`)) {
-                deleteMutation.mutate(s.id);
+                remove.mutate(s.id, {
+                  onSuccess: () =>
+                    updateSelectedIds((prev) =>
+                      prev.filter((item) => item !== s.id),
+                    ),
+                  onError: () => alert("Gagal menghapus data siswa."),
+                });
               }
             }}
             className="p-1.5 text-slate-400 hover:text-danger hover:bg-danger/10 rounded transition-colors"
@@ -225,7 +226,7 @@ export default function KelolaSiswa() {
         keyField="id"
         isLoading={isLoading}
         isError={isError}
-        errorMessage={error?.message}
+        errorMessage={error?.response?.data?.message || error?.message}
         emptyMessage="Tidak ada data siswa ditemukan."
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
@@ -237,16 +238,17 @@ export default function KelolaSiswa() {
         selectedCount={selectedIds.length}
         itemLabel="Siswa Terpilih"
         onDelete={handleBulkDelete}
-        onClear={() => setSelectedIds([])}
-        isDeleting={bulkDeleteMutation.isPending}
+        onClear={() => updateSelectedIds([])}
+        isDeleting={bulkRemove.isPending}
       />
 
       {/* Modal Form */}
       <StudentFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmitData={(data) => saveMutation.mutate(data)}
+        onSubmitData={handleSave}
         initialData={editingStudent}
+        isSubmitting={save.isPending}
       />
     </div>
   );

@@ -21,6 +21,7 @@ export default function StudentFormModal({
   onClose,
   onSubmitData,
   initialData = null,
+  isSubmitting = false,
 }) {
   const isEditing = Boolean(initialData);
 
@@ -28,7 +29,7 @@ export default function StudentFormModal({
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm({
     resolver: zodResolver(studentSchema),
     defaultValues: {
@@ -126,7 +127,10 @@ export default function StudentFormModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isFormSubmitting || isSubmitting}
+          >
             {isEditing ? "Simpan Perubahan" : "Tambah Siswa"}
           </Button>
         </div>
