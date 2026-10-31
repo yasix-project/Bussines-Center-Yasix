@@ -1,37 +1,33 @@
+// src/pages/Login.jsx
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import {
-  Shield,
-  RefreshCw,
+  ShieldCheck,
+  Server,
   Mail,
   Lock,
   ArrowRight,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
-import FeatureCard from "../../components/ui/FeatureCard";
-import BCYasixLogo from "../../components/ui/BcYasixLogo";
-import LogoYadika from "../../assets/yadika-seeklogo.png";
 
-import { useAuthStore } from "../../store/authStore";
 import { authService } from "../../api/authService";
+import BCYasixLogo from "../../components/ui/BcYasixLogo";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import Checkbox from "../../components/ui/Checkbox";
 
+// Skema Validasi Login Umum
 const loginSchema = z.object({
   email: z.string().email({ message: "Format email tidak valid." }),
-  password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
-  rememberMe: z.boolean().optional(),
+  password: z.string().min(1, { message: "Kata sandi wajib diisi." }),
 });
 
 export default function Login() {
   const navigate = useNavigate();
-  const loginAction = useAuthStore((state) => state.login);
-
-  const [, setShowForgotModal] = useState(false);
   const [loginError, setLoginError] = useState("");
 
   const {
@@ -40,26 +36,16 @@ export default function Login() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
-  const onLogin = async (data) => {
-    setLoginError("");
-    try {
-      // Panggil Endpoint Backend API v1 (/auth/login)
-      const response = await authService.login({
-        email: data.email,
-        password: data.password,
-      });
+  const loginMutation = useMutation({
+    mutationFn: (data) => authService.login(data), // Menggunakan endpoint login umum
+    onSuccess: (res) => {
+      const { token, user } = res.data.data;
 
-      const resData = response.data?.data || response.data;
-      const { token, user } = resData;
+      // Simpan token ke localStorage (atau Zustand sesuai kebutuhanmu)
+      localStorage.setItem("accessToken", token);
+      sessionStorage.setItem("userRole", user.role);
 
-      if (!token || !user) {
-        throw new Error("Respon dari server tidak valid.");
-      }
-
-      // Simpan User & Token ke Zustand Store
-      loginAction(user, token);
-
-      // Routing Otomatis Berdasarkan Role dari Backend
+      // Routing Otomatis Berdasarkan Role
       const userRole = user.role?.toUpperCase();
       if (userRole === "ADMIN") {
         navigate("/admin");
@@ -68,96 +54,146 @@ export default function Login() {
       } else {
         navigate("/siswa");
       }
-    } catch (err) {
+    },
+    onError: (err) => {
       const errorMessage =
         err.response?.data?.message ||
-        "Kredensial tidak valid. Silakan periksa kembali email dan kata sandi Anda.";
+        "Kredensial tidak valid atau koneksi ke server gagal.";
       setLoginError(errorMessage);
-    }
+    },
+  });
+
+  const onLogin = (data) => {
+    setLoginError("");
+    loginMutation.mutate(data);
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-100 flex items-center justify-center p-4 md:p-6 font-sans overflow-hidden">
-      {/* Glow ambient background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-137.5 h-137.5 bg-primary-gradient rounded-full blur-3xl pointer-events-none" />
-
+    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center p-4 md:p-6 font-sans overflow-hidden">
       {/* Kontainer Utama */}
-      <main className="relative z-10 max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200/80">
-        {/* === SISI KIRI: HERO SHOWCASE (Warna bg-dark dari logo Yadika) === */}
-        <section className="relative hidden md:flex md:w-5/12 bg-dark p-10 flex-col justify-between text-white overflow-hidden">
-          {/* Watermark Logo Yadika di Pojok Kanan Bawah Hero */}
-          <img
-            src={LogoYadika}
-            alt=""
-            aria-hidden="true"
-            className="absolute -bottom-10 -right-10 w-80 opacity-[0.06] pointer-events-none select-none"
-          />
+      <main className="relative z-10 max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        {/* === SISI KIRI: HERO SHOWCASE & SVG GLASS SHARDS === */}
+        <section className="relative hidden md:flex md:w-5/12 p-10 flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-900 via-slate-900 to-slate-950 text-white">
+          {/* ============================================================ */}
+          {/* BACKGROUND SVG: PECAHAN KACA FUTURISTIK (Di Sisi Kiri Saja)  */}
+          {/* ============================================================ */}
+          <div className="absolute inset-0 z-0 opacity-60 pointer-events-none">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient
+                  id="shardGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#60A5FA" stopOpacity="0.05" />
+                </linearGradient>
+              </defs>
+              <g className="animate-pulse-slow">
+                <polygon
+                  points="0,0 250,0 150,300"
+                  fill="url(#shardGrad)"
+                  stroke="rgba(59,130,246,0.3)"
+                  strokeWidth="1"
+                />
+                <polygon
+                  points="150,300 400,150 450,500"
+                  fill="url(#shardGrad)"
+                  stroke="rgba(255,255,255,0.08)"
+                  strokeWidth="1"
+                />
+                <polygon
+                  points="-50,500 -50,300 200,450"
+                  fill="url(#shardGrad)"
+                  stroke="rgba(59,130,246,0.2)"
+                  strokeWidth="1"
+                />
+                <polygon
+                  points="200,450 450,600 300,800"
+                  fill="url(#shardGrad)"
+                  stroke="rgba(255,255,255,0.05)"
+                  strokeWidth="1"
+                />
+                <polygon
+                  points="450,600 600,400 400,150"
+                  fill="url(#shardGrad)"
+                />
+              </g>
+            </svg>
+            {/* Efek Glow di tengah */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-500/30 rounded-full blur-[80px]"></div>
+          </div>
 
           <div className="space-y-8 relative z-10">
-            {/* Logo utama BC Yasix (versi gelap) + badge versi */}
+            {/* Logo Utama & Badge */}
             <div className="flex items-center justify-between gap-3">
               <BCYasixLogo variant="full" theme="dark" size={44} />
-              <span className="bg-white/10 border border-white/15 rounded-full px-3 py-1 text-[11px] font-semibold text-highlight">
-                v2.4
+              <span className="bg-blue-500/20 border border-blue-500/30 rounded-full px-3 py-1 text-[10px] font-extrabold text-blue-400 tracking-wider uppercase">
+                Portal Utama
               </span>
             </div>
 
-            {/* Headline */}
-            <div className="space-y-3">
+            {/* Headline Umum */}
+            <div className="space-y-4">
               <h1 className="text-3xl lg:text-4xl font-bold leading-tight tracking-tight text-white">
-                Akses Cerdas & Terpadu Bersama{" "}
-                <span className="text-blue-300/90 ">
-                  BC <span className="text-blue-500">Yasix</span>
-                </span>
+                Akses Cerdas & <br />
+                <span className="text-blue-400">Terpadu</span>
               </h1>
-              <p className="text-blue-100/75 text-sm leading-relaxed pr-2">
+              <p className="text-blue-200/60 text-sm leading-relaxed pr-6 font-medium">
                 Platform manajemen dan koordinasi terpusat dengan sistem
-                proteksi data berlapis untuk efisiensi operasional harian.
+                proteksi data berlapis untuk efisiensi operasional harian
+                Business Center Yasix.
               </p>
             </div>
 
-            {/* Features list */}
-            <div className="space-y-3.5 pt-2">
-              <FeatureCard
-                icon={Shield}
-                title="Enkripsi Kelas Enterprise"
-                description="Proteksi data dengan standar keamanan tinggi."
-                variant="glass"
-              />
-
-              <FeatureCard
-                icon={RefreshCw}
-                title="Sinkronisasi Real-Time"
-                description="Performa responsif ketersediaan latensi rendah."
-                variant="glass"
-              />
+            {/* Keunggulan */}
+            <div className="pt-4 space-y-4 hover:scale-[1.01] transition-transform hover:bg-blue-900/20 hover:backdrop-blur-sm rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 text-blue-400">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white">
+                    Enkripsi Kelas Enterprise
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Proteksi data dengan standar keamanan tinggi.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Footer Card */}
-          <div className="pt-6 border-t border-white/10 mt-8 flex justify-between items-center text-xs text-blue-200/60 font-medium relative z-10">
+          {/* Footer Card Showcase */}
+          <div className="pt-6 border-t border-white/10 mt-8 flex justify-between items-center text-xs text-slate-400 font-medium relative z-10">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-success" />
-              Server Normal (99.98%)
+              <Server size={14} className="text-emerald-400" />
+              <span className="text-emerald-400">
+                Status Server: Normal (99.98%)
+              </span>
             </div>
-            <span>© 2026 BC Yasix</span>
           </div>
         </section>
 
-        {/* === SISI KANAN: FORM PANEL === */}
-        <section className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-white relative">
+        {/* === SISI KANAN: FORM PANEL (TEMA GELAP) === */}
+        <section className="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-slate-900/90 relative z-10">
           {/* Header Form */}
-          <div className="flex items-center gap-4 mb-8">
-            <BCYasixLogo
-              variant="icon"
-              size={56}
-              className="shrink-0 transition-transform duration-300 hover:scale-105"
-            />
+          <div className="flex items-center gap-4 mb-10">
+            <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700 shadow-inner">
+              <BCYasixLogo variant="icon" size={48} className="shrink-0" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-dark">
+              <h2 className="text-2xl font-bold tracking-tight text-white">
                 Masuk ke Akun
               </h2>
-              <p className="text-sm text-slate-500 font-medium mt-0.5">
+              <p className="text-sm text-slate-400 font-medium mt-0.5">
                 Portal Akses Pengguna BC Yasix
               </p>
             </div>
@@ -168,11 +204,14 @@ export default function Login() {
             onSubmit={handleSubmit(onLogin)}
             className="space-y-5 w-full max-w-md"
           >
-            {/* Error Alert */}
+            {/* Error Alert Khusus Tema Gelap */}
             {loginError && (
-              <div className="p-3.5 rounded-xl bg-danger/10 border border-danger/30 text-sm text-danger font-medium flex items-start gap-3">
-                <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                <p>{loginError}</p>
+              <div className="p-4 rounded-xl bg-red-950/40 border border-red-900/50 text-sm text-red-400 font-medium flex items-start gap-3 shadow-inner">
+                <AlertCircle
+                  size={18}
+                  className="shrink-0 mt-0.5 text-red-500"
+                />
+                <p className="leading-relaxed">{loginError}</p>
               </div>
             )}
 
@@ -180,9 +219,11 @@ export default function Login() {
               id="email"
               label="Email atau ID Pengguna"
               icon={Mail}
-              placeholder="nama@perusahaan.com"
+              placeholder="nama@yasix.com"
               {...register("email")}
               error={errors.email?.message}
+              // Override class Input agar cocok di tema gelap
+              className="[&>label]:text-slate-300 [&_input]:bg-slate-800/50 [&_input]:border-slate-700 [&_input]:text-white [&_input]:placeholder-slate-500 [&_input]:focus:border-blue-500 [&_input]:focus:bg-slate-800"
             />
 
             <Input
@@ -193,30 +234,33 @@ export default function Login() {
               placeholder="••••••••"
               {...register("password")}
               error={errors.password?.message}
+              // Override class Input agar cocok di tema gelap
+              className="[&>label]:text-slate-300 [&_input]:bg-slate-800/50 [&_input]:border-slate-700 [&_input]:text-white [&_input]:placeholder-slate-500 [&_input]:focus:border-blue-500 [&_input]:focus:bg-slate-800 [&_button]:text-slate-400"
             />
-
-            <div className="flex items-center justify-between pt-1">
-              <Checkbox
-                id="rememberMe"
-                label="Ingat saya"
-                {...register("rememberMe")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(true)}
-                className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors"
-              >
-                Lupa kata sandi?
-              </button>
-            </div>
 
             <Button
               type="submit"
-              className="w-full py-3 mt-4 text-base rounded-xl bg-primary hover:bg-primary-hover active:bg-primary text-white shadow-md shadow-primary/20 transition-all font-semibold"
-              isLoading={isSubmitting}
+              className="w-full py-3.5 mt-8 text-base rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 transition-all font-bold border border-blue-500/50"
+              isLoading={isSubmitting || loginMutation.isPending}
             >
-              Masuk Sekarang <ArrowRight size={18} className="ml-1.5 inline" />
+              {isSubmitting || loginMutation.isPending ? (
+                <>
+                  <Loader2 size={18} className="animate-spin mr-2" />
+                  Memverifikasi...
+                </>
+              ) : (
+                <>
+                  Masuk Sekarang{" "}
+                  <ArrowRight size={18} className="ml-2 inline" />
+                </>
+              )}
             </Button>
+
+            <div className="mt-6 flex justify-between items-center text-center">
+              <p className="text-[11px] text-slate-500 font-mono tracking-widest uppercase mx-auto">
+                Secured Connection
+              </p>
+            </div>
           </form>
         </section>
       </main>

@@ -21,6 +21,7 @@ import KelolaVoucher from "./pages/admin/KelolaVoucher";
 import MonitoringShift from "./pages/admin/ShiftMonitoring";
 import KelolaSiswa from "./pages/admin/KelolaSiswa";
 import Pengaturan from "./pages/admin/Pengaturan";
+import AdminLogin from "./pages/auth/AdminLogin";
 
 // Fallback Halaman 403
 const Unauthorized = () => (
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/login/admin",
+    element: <AdminLogin />,
   },
   {
     path: "/unauthorized",
