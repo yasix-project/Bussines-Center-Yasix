@@ -1,6 +1,5 @@
 // src/pages/admin/Dashboard.jsx
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Wallet,
   ShoppingCart,
@@ -13,7 +12,7 @@ import StatCard from "../../components/admin/StatCard";
 import SalesBarChart from "../../components/admin/SalesBarChart";
 import CategoryDonutChart from "../../components/admin/CategoryDonutChart";
 
-import { analyticsService } from "../../api/analyticsService";
+import { useAnalytics } from "../../hooks/useAnalytics";
 import { formatRupiah } from "../../utils/formatters";
 
 // --- FALLBACK DUMMY DATA ---
@@ -38,23 +37,9 @@ const dummyCategoryData = [
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("7days");
 
-  // Fetch API Dashboard (Metrik Utama & Kategori)
-  const { data: dashboardData, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ["analytics", "dashboard"],
-    queryFn: async () => {
-      const res = await analyticsService.getDashboardMetrics();
-      return res.data?.data || null;
-    },
-  });
-
-  // Fetch API Sales (Grafik Batang)
-  const { data: salesData, isLoading: isLoadingSales } = useQuery({
-    queryKey: ["analytics", "sales", dateFilter],
-    queryFn: async () => {
-      const res = await analyticsService.getSalesReport(dateFilter);
-      return res.data?.data || null;
-    },
-  });
+  const { dashboard, sales } = useAnalytics(dateFilter);
+  const { data: dashboardData, isLoading: isLoadingMetrics } = dashboard;
+  const { data: salesData, isLoading: isLoadingSales } = sales;
 
   // Pemetaan Data (Gunakan data asli jika ada, jika tidak pakai dummy)
   const metrics = dashboardData?.metrics || {
