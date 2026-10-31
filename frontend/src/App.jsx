@@ -1,8 +1,4 @@
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Navigate,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 // Komponen Pelindung
 import ProtectedRoute from "./components/ui/ProtectedRoute";
@@ -22,6 +18,8 @@ import MonitoringShift from "./pages/admin/ShiftMonitoring";
 import KelolaSiswa from "./pages/admin/KelolaSiswa";
 import Pengaturan from "./pages/admin/Pengaturan";
 import AdminLogin from "./pages/auth/AdminLogin";
+import MonitoringTransaksi from "./pages/admin/MonitoringTransaksi";
+import NotFound from "./pages/NotFound";
 
 // Fallback Halaman 403
 const Unauthorized = () => (
@@ -80,6 +78,10 @@ const router = createBrowserRouter([
         path: "pengaturan",
         element: <Pengaturan />,
       },
+      {
+        path: "transaksi",
+        element: <MonitoringTransaksi />,
+      },
     ],
   },
   {
@@ -114,7 +116,7 @@ const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/login" replace />,
+    element: <NotFound />,
   },
 ]);
 

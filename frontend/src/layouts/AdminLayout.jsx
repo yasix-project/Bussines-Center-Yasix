@@ -1,4 +1,4 @@
-import { useState } from "react"; // [BARU]
+import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -6,20 +6,43 @@ import {
   LogOut,
   Settings,
   ChevronRight,
-  ChevronsLeft, // [BARU]
-  ChevronsRight, // [BARU]
+  ChevronsLeft,
+  ChevronsRight,
   FolderTree,
   Ticket,
   Clock,
   Users,
+  BanknoteArrowUp,
+  Menu, // [BARU] tombol hamburger (mobile)
+  X, // [BARU] tombol tutup drawer (mobile)
 } from "lucide-react";
-import BCYasixLogo from "../components/ui/BcYasixLogo"; // [BARU] menggantikan LogoYadika
+import BCYasixLogo from "../components/ui/BcYasixLogo";
+import LogoYadika from "../assets/yadika-seeklogo.png";
 import { useAuthStore } from "../store/authStore";
 
 export default function AdminLayout() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [collapsed, setCollapsed] = useState(false); // [BARU]
+  const [collapsed, setCollapsed] = useState(false); // desktop: ciut / lebar
+  const [mobileOpen, setMobileOpen] = useState(false); // [BARU] mobile: drawer
+
+  // Di drawer mobile label selalu tampil; mode ciut hanya berlaku di desktop
+  const mini = collapsed && !mobileOpen;
+
+  // [BARU] Tutup drawer: tombol Esc, dan saat layar diperbesar ke ukuran desktop
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e) => e.key === "Escape" && setMobileOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = (e) => e.matches && setMobileOpen(false);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const navigationGroups = [
     {
@@ -34,8 +57,19 @@ export default function AdminLayout() {
         { name: "Kelola Produk", path: "/admin/produk", icon: Package },
         { name: "Kelola Kategori", path: "/admin/kategori", icon: FolderTree },
         { name: "Kelola Voucher", path: "/admin/voucher", icon: Ticket },
-        { name: "Monitoring Shift", path: "/admin/shift", icon: Clock },
+
         { name: "Kelola Siswa", path: "/admin/siswa", icon: Users },
+      ],
+    },
+    {
+      title: "MONITORING",
+      items: [
+        { name: "Monitoring Shift", path: "/admin/shift", icon: Clock },
+        {
+          name: "Monitoring Transaksi",
+          path: "/admin/transaksi",
+          icon: BanknoteArrowUp,
+        },
       ],
     },
     {
@@ -52,51 +86,83 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-bright font-sans antialiased text-slate-800">
-      {/* Sidebar Minimalis */}
+    <div className="fixed inset-0 flex overflow-hidden bg-bright font-sans antialiased text-slate-800">
+      {/* [BARU] Overlay gelap di belakang drawer (mobile) */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ===== SIDEBAR: drawer di mobile, sidebar tetap di desktop ===== */}
       <aside
-        className={`relative ${
-          collapsed ? "w-20" : "w-64"
-        } transition-all duration-300 bg-white border-r border-slate-200/80 flex flex-col justify-between hidden md:flex z-20`}
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 md:static md:max-w-none ${
+          collapsed ? "md:w-20" : "md:w-64"
+        } transition-all duration-300 bg-dark border-r border-white/10 shadow-2xl shadow-dark/30 flex flex-col`}
       >
-        {/* [BARU] Tombol buka/tutup sidebar */}
+        {/* Lapisan dekorasi: glow & watermark */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary/40 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 -right-24 w-64 h-64 bg-cyan/10 rounded-full blur-3xl" />
+          <img
+            src={LogoYadika}
+            alt=""
+            aria-hidden="true"
+            className="absolute -bottom-12 -right-12 w-64 opacity-[0.06] select-none"
+          />
+        </div>
+
+        {/* Tombol buka/tutup sidebar (desktop saja) */}
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="absolute -right-3 top-8 w-6 h-6 flex items-center justify-center rounded-full bg-white text-slate-500 hover:text-primary border border-slate-200 shadow-sm z-30"
+          className="hidden md:flex absolute -right-3 top-8 w-6 h-6 items-center justify-center rounded-full bg-dark text-sky border border-white/20 shadow-lg hover:bg-primary hover:text-white hover:border-primary transition-colors z-30"
           title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
           aria-label={collapsed ? "Buka sidebar" : "Tutup sidebar"}
         >
           {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
         </button>
 
-        <div>
-          {/* [BARU] Logo Yasix Merch di atas */}
+        <div className="relative z-10 flex flex-col flex-1 min-h-0">
+          {/* Logo di atas (+ tombol X di mobile) */}
           <div
-            className={`h-20 flex items-center border-b border-slate-100 ${
-              collapsed ? "justify-center" : "px-6"
+            className={`h-20 shrink-0 flex items-center border-b border-white/10 pt-[env(safe-area-inset-top)] ${
+              mini ? "justify-center" : "px-6 justify-between"
             }`}
           >
-            {collapsed ? (
-              <BCYasixLogo variant="icon" theme="light" size={40} />
+            {mini ? (
+              <BCYasixLogo variant="icon" theme="dark" size={40} />
             ) : (
               <BCYasixLogo
                 variant="full"
-                theme="light"
+                theme="dark"
                 size={40}
                 tagline={false}
               />
             )}
+
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden p-2 -mr-2 rounded-lg text-blue-200/80 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Tutup menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          {/* Navigasi Terkelompok */}
-          <nav className="p-4 space-y-6">
+          {/* Navigasi Terkelompok (bagian ini yang bisa di-scroll) */}
+          <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-6 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent]">
             {navigationGroups.map((group) => (
               <div key={group.title}>
-                {collapsed ? (
-                  <div className="mx-3 mb-2 border-t border-slate-200" />
+                {mini ? (
+                  <div className="mx-3 mb-2 border-t border-white/10" />
                 ) : (
-                  <p className="px-3 text-[10px] font-semibold tracking-wider text-slate-400 mb-2 uppercase">
+                  <p className="px-3 text-[10px] font-semibold tracking-wider text-blue-200/50 mb-2 uppercase">
                     {group.title}
                   </p>
                 )}
@@ -108,20 +174,27 @@ export default function AdminLayout() {
                       <Link
                         key={item.name}
                         to={item.path}
-                        title={collapsed ? item.name : undefined}
+                        title={mini ? item.name : undefined}
+                        onClick={() => setMobileOpen(false)}
                         className={`flex items-center ${
-                          collapsed ? "justify-center" : "justify-between"
-                        } px-3 py-2.5 rounded-xl text-sm font-normal transition-all ${
+                          mini ? "justify-center" : "justify-between"
+                        } px-3 py-3 md:py-2.5 rounded-xl text-sm font-normal border transition-all ${
                           isActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-slate-500 hover:bg-slate-50 hover:text-dark"
+                            ? "bg-primary/30 border-primary/50 text-white backdrop-blur-md shadow-[inset_3px_0_0_var(--color-accent)]"
+                            : "border-transparent text-blue-100/70 hover:bg-white/10 hover:border-white/10 hover:text-white active:bg-white/10"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                          {!collapsed && <span>{item.name}</span>}
+                          <Icon
+                            size={18}
+                            strokeWidth={isActive ? 2.5 : 2}
+                            className={isActive ? "text-cyan" : ""}
+                          />
+                          {!mini && <span>{item.name}</span>}
                         </div>
-                        {!collapsed && isActive && <ChevronRight size={14} />}
+                        {!mini && isActive && (
+                          <ChevronRight size={14} className="text-cyan" />
+                        )}
                       </Link>
                     );
                   })}
@@ -131,26 +204,26 @@ export default function AdminLayout() {
           </nav>
         </div>
 
-        {/* Profil Pengguna di Bawah Sidebar */}
-        <div className="p-4 border-t border-slate-100">
+        {/* Profil Pengguna: kartu kaca (aman dari bar gestur Android) */}
+        <div className="relative z-10 shrink-0 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/10">
           <div
             className={`flex items-center ${
-              collapsed ? "flex-col gap-2" : "justify-between"
-            } p-2.5 bg-slate-50 rounded-xl border border-slate-200/60`}
+              mini ? "flex-col gap-2" : "justify-between"
+            } p-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10`}
           >
             <div className="flex items-center gap-3 overflow-hidden">
               <div
-                className="w-9 h-9 rounded-lg bg-primary text-white font-bold flex items-center justify-center shrink-0"
-                title={collapsed ? user?.name || "Admin Manager" : undefined}
+                className="w-9 h-9 rounded-lg bg-primary text-white font-bold flex items-center justify-center shrink-0 shadow-md shadow-primary/30"
+                title={mini ? user?.name || "Admin Manager" : undefined}
               >
                 {user?.name?.charAt(0) || "A"}
               </div>
-              {!collapsed && (
+              {!mini && (
                 <div className="truncate">
-                  <p className="text-xs font-bold text-dark truncate">
+                  <p className="text-xs font-bold text-white truncate">
                     {user?.name || "Admin Manager"}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-medium truncate">
+                  <p className="text-[10px] text-blue-200/80 font-medium truncate">
                     Administrator
                   </p>
                 </div>
@@ -159,8 +232,9 @@ export default function AdminLayout() {
 
             <button
               onClick={handleLogout}
-              className="p-1.5 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors shrink-0"
+              className="p-2 text-blue-200/70 hover:text-red-300 hover:bg-danger/20 rounded-lg transition-colors shrink-0"
               title="Keluar"
+              aria-label="Keluar"
             >
               <LogOut size={16} />
             </button>
@@ -168,21 +242,27 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Konten Utama */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header (Logo di Ponsel) */}
-        <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-6 md:hidden">
-          {/* [BARU] logo Yasix Merch menggantikan logo lama */}
-          <BCYasixLogo variant="full" theme="light" size={32} tagline={false} />
+      {/* ===== KONTEN UTAMA ===== */}
+      <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+        {/* Glow ambient halus di latar konten */}
+        <div className="absolute -top-32 -right-32 w-96 h-96 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-cyan/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Mobile Header: hamburger + logo (kaca gelap) */}
+        <header className="relative z-10 shrink-0 bg-dark/95 backdrop-blur-md border-b border-white/10 h-16 pt-[env(safe-area-inset-top)] box-content flex items-center gap-3 px-4 md:hidden">
           <button
-            onClick={handleLogout}
-            className="text-xs font-semibold text-danger"
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="p-2 -ml-2 rounded-lg text-sky hover:bg-white/10 active:bg-white/10 transition-colors"
+            aria-label="Buka menu"
+            aria-expanded={mobileOpen}
           >
-            Keluar
+            <Menu size={22} />
           </button>
+          <BCYasixLogo variant="full" theme="dark" size={32} tagline={false} />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">
           <Outlet />
         </main>
       </div>

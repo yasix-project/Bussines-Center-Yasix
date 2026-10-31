@@ -28,12 +28,7 @@ export default function KelolaProduk() {
   const [editingProduct, setEditingProduct] = useState(null);
 
   // 1. Queries
-  const {
-    data: products = [],
-    isLoading,
-    isError,
-    error,
-  } = useProducts();
+  const { data: products = [], isLoading, isError, error } = useProducts();
   const { data: categories = [] } = useCategories();
 
   // 2. Mutations
@@ -111,9 +106,7 @@ export default function KelolaProduk() {
     if (window.confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
       remove.mutate(id, {
         onSuccess: (_data, removedId) =>
-          setSelectedIds((prev) =>
-            prev.filter((item) => item !== removedId),
-          ),
+          setSelectedIds((prev) => prev.filter((item) => item !== removedId)),
         onError: () => alert("Gagal menghapus produk dari database."),
       });
     }

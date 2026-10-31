@@ -1,17 +1,20 @@
 // src/components/admin/FloatingBulkBar.jsx
-import { Download, Ban, Trash2, Power, Edit3 } from "lucide-react";
+import { Download, Ban, Trash2, Power, Edit3, Printer } from "lucide-react";
 import Button from "../ui/Button";
 import BulkActionBar from "../ui/BulkActionBar";
 
 export default function FloatingBulkBar({
   selectedCount,
   onExport,
+  onPrint,
+  onCancel,
   onBulkEdit,
   onDeactivate,
   onActivate,
   areAllInactive = false,
   onDelete,
   onClear,
+  itemLabel = "Produk Terpilih",
   isDeactivating,
   isActivating,
   isDeleting,
@@ -22,16 +25,38 @@ export default function FloatingBulkBar({
     <BulkActionBar
       selectedCount={selectedCount}
       onClear={onClear}
-      itemLabel="Produk Terpilih"
+      itemLabel={itemLabel}
     >
       <Button
         variant="outline"
         size="xs"
         onClick={onExport}
-        className="border-white/10 bg-white/10 text-white hover:bg-white/20 focus-visible:ring-white/60 active:scale-95"
+        className="active:scale-95"
       >
         <Download size={14} /> Export CSV
       </Button>
+
+      {onPrint && (
+        <Button
+          variant="secondary"
+          size="xs"
+          onClick={onPrint}
+          className="active:scale-95"
+        >
+          <Printer size={14} /> Cetak Struk
+        </Button>
+      )}
+
+      {onCancel && (
+        <Button
+          variant="danger"
+          size="xs"
+          onClick={onCancel}
+          className="active:scale-95"
+        >
+          <Trash2 size={14} /> Batalkan
+        </Button>
+      )}
 
       {onBulkEdit && (
         <Button
@@ -44,40 +69,43 @@ export default function FloatingBulkBar({
         </Button>
       )}
 
-      {areAllInactive ? (
+      {(onActivate || onDeactivate) &&
+        (areAllInactive ? (
+          <Button
+            variant="primary"
+            size="xs"
+            onClick={onActivate || onDeactivate}
+            isLoading={isStatusLoading}
+            className="bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30 focus-visible:ring-emerald-300 active:scale-95"
+          >
+            {!isStatusLoading && <Power size={14} />}
+            Aktifkan Terpilih
+          </Button>
+        ) : (
+          <Button
+            variant="amber"
+            size="xs"
+            onClick={onDeactivate}
+            isLoading={isStatusLoading}
+            className="shadow-amber-900/30 focus-visible:ring-amber-300 active:scale-95"
+          >
+            {!isStatusLoading && <Ban size={14} />}
+            Nonaktifkan Terpilih
+          </Button>
+        ))}
+
+      {onDelete && (
         <Button
-          variant="primary"
+          variant="danger"
           size="xs"
-          onClick={onActivate || onDeactivate}
-          isLoading={isStatusLoading}
-          className="bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30 focus-visible:ring-emerald-300 active:scale-95"
+          onClick={onDelete}
+          isLoading={isDeleting}
+          className="shadow-red-900/30 focus-visible:ring-red-300 active:scale-95"
         >
-          {!isStatusLoading && <Power size={14} />}
-          Aktifkan Terpilih
-        </Button>
-      ) : (
-        <Button
-          variant="amber"
-          size="xs"
-          onClick={onDeactivate}
-          isLoading={isStatusLoading}
-          className="shadow-amber-900/30 focus-visible:ring-amber-300 active:scale-95"
-        >
-          {!isStatusLoading && <Ban size={14} />}
-          Nonaktifkan Terpilih
+          {!isDeleting && <Trash2 size={14} />}
+          Hapus Massal
         </Button>
       )}
-
-      <Button
-        variant="danger"
-        size="xs"
-        onClick={onDelete}
-        isLoading={isDeleting}
-        className="shadow-red-900/30 focus-visible:ring-red-300 active:scale-95"
-      >
-        {!isDeleting && <Trash2 size={14} />}
-        Hapus Massal
-      </Button>
     </BulkActionBar>
   );
 }
