@@ -162,7 +162,11 @@ export default function ProductTable({
       keyField="id"
       isLoading={isLoading}
       isError={isError}
-      errorMessage={error?.message || "Gagal mengambil data produk."}
+      errorMessage={
+        error?.response?.data?.message ||
+        error?.message ||
+        "Gagal mengambil data produk."
+      }
       emptyMessage="Tidak ada produk yang sesuai dengan kriteria pencarian."
       selectedIds={selectedIds}
       onSelectAll={onSelectAll}

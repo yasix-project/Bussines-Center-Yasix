@@ -10,6 +10,7 @@ import Modal from "../ui/Modal";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { productService } from "../../api/productService";
+import { categoryKeys } from "../../hooks/useCategories";
 import { formatRupiah } from "../../utils/formatters";
 
 const productSchema = z.object({
@@ -48,6 +49,7 @@ export default function ProductFormModal({
   onClose,
   onSubmitData,
   initialData = null,
+  isSubmitting = false,
 }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -59,14 +61,14 @@ export default function ProductFormModal({
     watch,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm({
     resolver: zodResolver(productSchema),
   });
 
   // Fetch Kategori
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-    queryKey: ["categories"],
+    queryKey: categoryKeys.list(),
     queryFn: async () => {
       const response = await productService.getCategories();
       return Array.isArray(response.data?.data)
@@ -386,7 +388,11 @@ export default function ProductFormModal({
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" size="sm" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            size="sm"
+            isLoading={isFormSubmitting || isSubmitting}
+          >
             Simpan Produk
           </Button>
         </div>

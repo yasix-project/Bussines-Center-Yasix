@@ -1,6 +1,5 @@
 // src/pages/admin/KelolaProduk.jsx
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Download,
@@ -17,11 +16,11 @@ import ProductFilterBar from "../../components/admin/ProductFilterBar";
 import ProductTable from "../../components/admin/ProductTable";
 import FloatingBulkBar from "../../components/admin/FloatingBulkBar";
 
-import { productService } from "../../api/productService";
+import { useCategories } from "../../hooks/useCategories";
+import { useProductMutations, useProducts } from "../../hooks/useProducts";
 import { formatRupiah, exportProductsToCSV } from "../../utils/formatters";
 
 export default function KelolaProduk() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedIds, setSelectedIds] = useState([]);
@@ -34,97 +33,32 @@ export default function KelolaProduk() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const response = await productService.getAll();
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data || [];
-    },
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      const response = await productService.getCategories();
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data || [];
-    },
-  });
+  } = useProducts();
+  const { data: categories = [] } = useCategories();
 
   // 2. Mutations
-  const saveProductMutation = useMutation({
-    mutationFn: (formData) =>
-      editingProduct
-        ? productService.update(editingProduct.id, formData)
-        : productService.create(formData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setIsModalOpen(false);
-      setEditingProduct(null);
-    },
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal menyimpan data produk."),
-  });
+  const {
+    save,
+    toggleActive,
+    remove,
+    bulkDeactivate,
+    bulkActivate,
+    bulkRemove,
+  } = useProductMutations();
 
-  const toggleActiveMutation = useMutation({
-    mutationFn: (product) =>
-      productService.update(product.id, {
-        isActive: product.isActive === false,
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal mengubah status produk."),
-  });
-
-  const deleteProductMutation = useMutation({
-    mutationFn: (id) => productService.delete(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    },
-    onError: () => alert("Gagal menghapus produk dari database."),
-  });
-
-  const bulkDeactivateMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(
-        ids.map((id) => productService.update(id, { isActive: false })),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setSelectedIds([]);
-    },
-    onError: () => alert("Gagal menonaktifkan beberapa produk."),
-  });
-
-  // Mutation Aktifkan Massal
-  const bulkActivateMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(
-        ids.map((id) => productService.update(id, { isActive: true })),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setSelectedIds([]);
-    },
-    onError: () => alert("Gagal mengaktifkan beberapa produk."),
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => productService.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setSelectedIds([]);
-    },
-    onError: () => alert("Sebagian atau seluruh produk gagal dihapus."),
-  });
+  const handleSave = (data) => {
+    save.mutate(
+      { id: editingProduct?.id, data },
+      {
+        onSuccess: () => {
+          setIsModalOpen(false);
+          setEditingProduct(null);
+        },
+        onError: (err) =>
+          alert(err.response?.data?.message || "Gagal menyimpan data produk."),
+      },
+    );
+  };
 
   // 3. Action Handlers
   const handleToggleActive = (product) => {
@@ -135,7 +69,15 @@ export default function KelolaProduk() {
         `Apakah Anda yakin ingin ${actionText} produk "${product.name}"?`,
       )
     ) {
-      toggleActiveMutation.mutate(product);
+      toggleActive.mutate(
+        { id: product.id, isActive: product.isActive },
+        {
+          onError: (err) =>
+            alert(
+              err.response?.data?.message || "Gagal mengubah status produk.",
+            ),
+        },
+      );
     }
   };
 
@@ -145,7 +87,10 @@ export default function KelolaProduk() {
         `Apakah Anda yakin ingin menonaktifkan ${selectedIds.length} produk terpilih?`,
       )
     ) {
-      bulkDeactivateMutation.mutate(selectedIds);
+      bulkDeactivate.mutate(selectedIds, {
+        onSuccess: () => setSelectedIds([]),
+        onError: () => alert("Gagal menonaktifkan beberapa produk."),
+      });
     }
   };
 
@@ -155,13 +100,22 @@ export default function KelolaProduk() {
         `Apakah Anda yakin ingin mengaktifkan kembali ${selectedIds.length} produk terpilih?`,
       )
     ) {
-      bulkActivateMutation.mutate(selectedIds);
+      bulkActivate.mutate(selectedIds, {
+        onSuccess: () => setSelectedIds([]),
+        onError: () => alert("Gagal mengaktifkan beberapa produk."),
+      });
     }
   };
 
   const handleDeleteProduct = (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
-      deleteProductMutation.mutate(id);
+      remove.mutate(id, {
+        onSuccess: (_data, removedId) =>
+          setSelectedIds((prev) =>
+            prev.filter((item) => item !== removedId),
+          ),
+        onError: () => alert("Gagal menghapus produk dari database."),
+      });
     }
   };
 
@@ -171,7 +125,15 @@ export default function KelolaProduk() {
         `Apakah Anda yakin ingin menghapus ${selectedIds.length} produk terpilih?`,
       )
     ) {
-      bulkDeleteMutation.mutate(selectedIds);
+      bulkRemove.mutate(selectedIds, {
+        onSuccess: (failedIds) => {
+          setSelectedIds(failedIds);
+          if (failedIds.length > 0) {
+            alert(`${failedIds.length} produk gagal dihapus.`);
+          }
+        },
+        onError: () => alert("Sebagian atau seluruh produk gagal dihapus."),
+      });
     }
   };
 
@@ -316,17 +278,18 @@ export default function KelolaProduk() {
         onActivate={handleBulkActivate}
         onDelete={handleBulkDelete}
         onClear={() => setSelectedIds([])}
-        isDeactivating={bulkDeactivateMutation.isPending}
-        isActivating={bulkActivateMutation.isPending}
-        isDeleting={bulkDeleteMutation.isPending}
+        isDeactivating={bulkDeactivate.isPending}
+        isActivating={bulkActivate.isPending}
+        isDeleting={bulkRemove.isPending}
       />
 
       {/* Modal Form */}
       <ProductFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmitData={(formData) => saveProductMutation.mutate(formData)}
+        onSubmitData={handleSave}
         initialData={editingProduct}
+        isSubmitting={save.isPending}
       />
     </div>
   );
