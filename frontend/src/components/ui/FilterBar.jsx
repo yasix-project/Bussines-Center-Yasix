@@ -1,19 +1,21 @@
 // src/components/ui/FilterBar.jsx
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export default function FilterBar({
   searchPlaceholder = "Cari...",
-  searchValue,
+  searchValue = "",
   onSearchChange,
   filterTabs = [], // Format: [{ label: "Semua", value: "all" }, ...]
   activeTab,
   onTabChange,
 }) {
   return (
-    <div className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3 justify-between items-center">
-      <div className="relative w-full md:w-80">
+    // Wadah luar: sama dengan Table (bg-bright, rounded-2xl, border halus)
+    <div className="bg-bright p-2 rounded-2xl border border-slate-200 shadow-sm shadow-dark/5 flex flex-col md:flex-row gap-2 justify-between items-stretch md:items-center">
+      {/* Kolom pencarian */}
+      <div className="relative w-full md:w-80 group">
         <Search
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"
           size={16}
         />
         <input
@@ -21,25 +23,43 @@ export default function FilterBar({
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-4 py-1.5 text-xs border border-slate-200 rounded-md outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+          className="w-full pl-10 pr-9 py-2.5 text-xs font-medium text-dark placeholder:text-slate-400 bg-white border border-slate-200 rounded-xl outline-none hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
         />
+        {searchValue && (
+          <button
+            type="button"
+            onClick={() => onSearchChange("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-dark hover:bg-sky transition-colors"
+            aria-label="Hapus pencarian"
+          >
+            <X size={13} />
+          </button>
+        )}
       </div>
 
+      {/* Tab filter: kelompok pil, tab aktif bergaya header tabel (bg-dark) */}
       {filterTabs.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          {filterTabs.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => onTabChange(tab.value)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
-                activeTab === tab.value
-                  ? "bg-primary text-white shadow-xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl overflow-x-auto w-full md:w-auto">
+          {filterTabs.map((tab) => {
+            const isActive = activeTab === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => onTabChange(tab.value)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-dark text-white shadow-md shadow-dark/25"
+                    : "text-slate-500 hover:bg-sky/60 hover:text-dark"
+                }`}
+              >
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                )}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
