@@ -10,6 +10,7 @@ const transactionRoutes = require("./transaction.routes");
 const shiftRoutes = require("./shift.routes");
 const voucherRoutes = require("./voucher.routes");
 const analyticsRoutes = require("./analytics.routes");
+const studentRoutes = require("./student.routes");
 
 // Health Check
 router.get("/health", async (req, res) => {
@@ -49,6 +50,7 @@ router.use("/categories", categoryRoutes);
 router.use("/print", printRoutes);
 router.use("/transactions", transactionRoutes);
 router.use("/vouchers", voucherRoutes);
+router.use("/students", studentRoutes);
 router.use("/analytics", analyticsRoutes);
 
 module.exports = router;

@@ -57,7 +57,62 @@ const registerSiswaService = async (data) => {
   return resultData;
 };
 
+const updateProfileService = async (userId, data) => {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!existingUser) {
+    throw new Error("Pengguna tidak ditemukan.");
+  }
+
+  const updatePayload = {};
+
+  // 1. Update Nama
+  if (data.name) {
+    updatePayload.name = data.name;
+  }
+
+  // 2. Update Email (Cek Keunikan Email)
+  if (data.email && data.email !== existingUser.email) {
+    const emailTaken = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+    if (emailTaken) {
+      throw new Error("Email sudah digunakan oleh pengguna lain.");
+    }
+    updatePayload.email = data.email;
+  }
+
+  // 3. Update Password (jika diisi)
+  if (data.password) {
+    if (data.password.length < 6) {
+      throw new Error("Password minimal harus 6 karakter.");
+    }
+    updatePayload.password = await bcrypt.hash(data.password, 10);
+  }
+
+  // Eksekusi Update ke Database
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updatePayload,
+    select: {
+      id: true,
+      nis: true,
+      name: true,
+      email: true,
+      role: true,
+      qrCodeMember: true,
+      points: true,
+      updatedAt: true,
+    },
+  });
+
+  return updatedUser;
+};
+
 module.exports = {
   loginService,
   registerSiswaService,
+  updateProfileService,
 };

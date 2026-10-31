@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 /**
- * Logo BC Yasix (SVG inline, tanpa file gambar).
+ * Logo Yasix Merch (SVG inline, tanpa file gambar).
  *
  * variant : "icon" = perisai saja | "full" = perisai + tulisan
  * theme   : "light" = untuk latar terang | "dark" = untuk latar gelap (panel bg-dark)
@@ -26,7 +26,7 @@ export default function BCYasixLogo({
       width={size}
       height={size}
       role={variant === "icon" ? "img" : undefined}
-      aria-label={variant === "icon" ? "Logo BC Yasix" : undefined}
+      aria-label={variant === "icon" ? "Logo Yasix Merch" : undefined}
       aria-hidden={variant === "icon" ? undefined : true}
       style={{ flexShrink: 0 }}
     >
@@ -114,7 +114,7 @@ export default function BCYasixLogo({
     <div
       className={className}
       role="img"
-      aria-label="Logo BC Yasix"
+      aria-label="Logo Yasix Merch"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -138,11 +138,11 @@ export default function BCYasixLogo({
             color: dark ? "#FFFFFF" : "#0B2D6B",
           }}
         >
-          <span style={{ fontWeight: 800 }}>BC</span>{" "}
+          <span style={{ fontWeight: 800 }}>Yasix</span>{" "}
           <span
             style={{ fontWeight: 500, color: dark ? "#8DB8FF" : "#1F5FC2" }}
           >
-            Yasix
+            Merch
           </span>
         </div>
         {tagline && (

@@ -17,4 +17,5 @@ router.post(
 // Protected Route (Cek Profil Akun Aktif)
 router.get("/me", verifyToken, authController.getMe);
 
+router.put("/profile", verifyToken, authController.updateProfile);
 module.exports = router;

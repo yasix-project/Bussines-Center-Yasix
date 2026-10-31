@@ -11,8 +11,9 @@ import {
   FolderTree,
   Ticket,
   Clock,
+  Users,
 } from "lucide-react";
-import BCYasixLogo from "../components/ui/BCYasixLogo"; // [BARU] menggantikan LogoYadika
+import BCYasixLogo from "../components/ui/BcYasixLogo"; // [BARU] menggantikan LogoYadika
 import { useAuthStore } from "../store/authStore";
 
 export default function AdminLayout() {
@@ -32,6 +33,7 @@ export default function AdminLayout() {
         { name: "Kelola Kategori", path: "/admin/kategori", icon: FolderTree },
         { name: "Kelola Voucher", path: "/admin/voucher", icon: Ticket },
         { name: "Monitoring Shift", path: "/admin/shift", icon: Clock },
+        { name: "Kelola Siswa", path: "/admin/siswa", icon: Users },
       ],
     },
     {
@@ -67,7 +69,7 @@ export default function AdminLayout() {
         </button>
 
         <div>
-          {/* [BARU] Logo BC Yasix di atas */}
+          {/* [BARU] Logo Yasix Merch di atas */}
           <div
             className={`h-20 flex items-center border-b border-slate-100 ${
               collapsed ? "justify-center" : "px-6"
@@ -168,7 +170,7 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header (Logo di Ponsel) */}
         <header className="bg-white border-b border-slate-200/80 h-16 flex items-center justify-between px-6 md:hidden">
-          {/* [BARU] logo BC Yasix menggantikan logo lama */}
+          {/* [BARU] logo Yasix Merch menggantikan logo lama */}
           <BCYasixLogo variant="full" theme="light" size={32} tagline={false} />
           <button
             onClick={handleLogout}

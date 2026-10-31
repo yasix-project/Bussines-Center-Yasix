@@ -91,7 +91,7 @@ export default function Dashboard() {
             Dashboard Overview
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Ringkasan performa penjualan Business Center Yasix
+            Ringkasan performa penjualan Yasix Merch
           </p>
         </div>
 

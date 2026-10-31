@@ -12,7 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import FeatureCard from "../../components/ui/FeatureCard";
-import BCYasixLogo from "../../components/ui/BcyasixLogo";
+import BCYasixLogo from "../../components/ui/BcYasixLogo";
 import LogoYadika from "../../assets/yadika-seeklogo.png";
 
 import { useAuthStore } from "../../store/authStore";
