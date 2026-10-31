@@ -3,13 +3,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Lock, Mail, ShieldAlert, ArrowRight, Loader2 } from "lucide-react";
 
 import Input from "../../components/ui/Input";
 import BCYasixLogo from "../../components/ui/BcYasixLogo";
-import { authService } from "../../api/authService";
+import { useAuthMutations } from "../../hooks/useAuth";
 import { useAuthStore } from "../../store/authStore";
 
 const loginSchema = z.object({
@@ -20,6 +19,7 @@ const loginSchema = z.object({
 export default function AdminLogin() {
   const navigate = useNavigate();
   const [authError, setAuthError] = useState("");
+  const { loginAdmin } = useAuthMutations();
 
   // Panggil action login dari Zustand store
   const loginAction = useAuthStore((state) => state.login);
@@ -33,28 +33,20 @@ export default function AdminLogin() {
     defaultValues: { email: "", password: "" },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: (data) => authService.loginAdmin(data),
-    onSuccess: (res) => {
-      const { token, user } = res.data.data;
-
-      // Simpan user dan token ke Zustand agar dikenali oleh ProtectedRoute
-      loginAction(user, token);
-
-      // Simpan ke storage tambahan jika Axios butuh dari localStorage
-      localStorage.setItem("accessToken", token);
-      sessionStorage.setItem("userRole", user.role);
-
-      navigate("/admin/dashboard");
-    },
-    onError: (err) => {
-      setAuthError(err.response?.data?.message || "Koneksi ke server gagal.");
-    },
-  });
-
   const onSubmit = (data) => {
     setAuthError("");
-    loginMutation.mutate(data);
+    loginAdmin.mutate(data, {
+      onSuccess: (res) => {
+        const { token, user } = res.data.data;
+        loginAction(user, token);
+        localStorage.setItem("accessToken", token);
+        sessionStorage.setItem("userRole", user.role);
+        navigate("/admin/dashboard");
+      },
+      onError: (err) => {
+        setAuthError(err.response?.data?.message || "Koneksi ke server gagal.");
+      },
+    });
   };
 
   return (
@@ -185,10 +177,10 @@ export default function AdminLogin() {
 
           <button
             type="submit"
-            disabled={isSubmitting || loginMutation.isPending}
+            disabled={isSubmitting || loginAdmin.isPending}
             className="w-full py-3.5 mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
           >
-            {isSubmitting || loginMutation.isPending ? (
+            {isSubmitting || loginAdmin.isPending ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
                 <span>Otentikasi...</span>
