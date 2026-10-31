@@ -2,30 +2,82 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/prisma");
 
-const loginService = async (email, password) => {
+const loginService = async (email, password, ipAddress) => {
+  const user = await prisma.user.findUnique({
+    //[cite: 6]
+    where: { email }, //[cite: 6]
+  });
+
+  if (!user) {
+    //[cite: 6]
+    console.warn(
+      `[AUTH] Failed login attempt for ${email} from IP: ${ipAddress}`,
+    );
+    throw new Error("Email atau password salah."); //[cite: 6]
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password); //[cite: 6]
+  if (!isPasswordValid) {
+    //[cite: 6]
+    console.warn(
+      `[AUTH] Invalid password attempt for ${email} from IP: ${ipAddress}`,
+    );
+    throw new Error("Email atau password salah."); //[cite: 6]
+  }
+
+  const token = jwt.sign(
+    //[cite: 6]
+    { id: user.id, role: user.role, email: user.email }, //[cite: 6]
+    process.env.JWT_SECRET, //[cite: 6]
+    { expiresIn: "1d" }, //[cite: 6]
+  );
+
+  const { password: _, ...userData } = user; //[cite: 6]
+  return { user: userData, token }; //[cite: 6]
+};
+
+// --- SERVICE LOGIN KHUSUS ADMIN (KEAMANAN EKSTRA) ---
+const loginAdminService = async (email, password, ipAddress, userAgent) => {
   const user = await prisma.user.findUnique({
     where: { email },
   });
 
   if (!user) {
-    throw new Error("Email atau password salah.");
+    console.warn(
+      `[SEC-ADMIN] Failed Admin login attempt: Non-existent email (${email}) - IP: ${ipAddress}`,
+    );
+    throw new Error("Email atau password tidak valid.");
+  }
+
+  // VALIDASI KETAT: Tolak jika role bukan ADMIN
+  if (user.role !== "ADMIN") {
+    console.error(
+      `[SEC-CRITICAL] Unauthorized Admin Login Attempt by User ID: ${user.id} (${user.email}) - IP: ${ipAddress}`,
+    );
+    throw new Error("Akses ditolak. Anda tidak memiliki hak akses Admin.");
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
-    throw new Error("Email atau password salah.");
+    console.warn(
+      `[SEC-ADMIN] Invalid Password for Admin (${email}) - IP: ${ipAddress}`,
+    );
+    throw new Error("Email atau password tidak valid.");
   }
 
   const token = jwt.sign(
     { id: user.id, role: user.role, email: user.email },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" },
+    { expiresIn: "8h" }, // Session Admin dibuat lebih pendek (8 jam)
+  );
+
+  console.info(
+    `[SEC-ADMIN] Admin Login Success: ${user.email} - IP: ${ipAddress} - Agent: ${userAgent}`,
   );
 
   const { password: _, ...userData } = user;
   return { user: userData, token };
 };
-
 const registerSiswaService = async (data) => {
   const { nis, name, email, password } = data;
 
@@ -113,6 +165,7 @@ const updateProfileService = async (userId, data) => {
 
 module.exports = {
   loginService,
+  loginAdminService,
   registerSiswaService,
   updateProfileService,
 };

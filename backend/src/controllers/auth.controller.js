@@ -1,8 +1,45 @@
 const authService = require("../services/auth.service");
 
 const login = async (req, res) => {
+  //[cite: 6]
+  try {
+    const { email, password } = req.body; //[cite: 6]
+    const ipAddress =
+      req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+    if (!email || !password) {
+      //[cite: 6]
+      return res.status(400).json({
+        //[cite: 6]
+        status: "error", //[cite: 6]
+        message: "Email dan password wajib diisi.", //[cite: 6]
+      });
+    }
+
+    const result = await authService.loginService(email, password, ipAddress); //[cite: 6]
+    return res.status(200).json({
+      //[cite: 6]
+      status: "success", //[cite: 6]
+      message: "Login berhasil.", //[cite: 6]
+      data: result, //[cite: 6]
+    });
+  } catch (error) {
+    //[cite: 6]
+    return res.status(401).json({
+      // Gunakan 401 Unauthorized untuk gagal login
+      status: "error", //[cite: 6]
+      message: error.message, //[cite: 6]
+    });
+  }
+};
+
+// --- CONTROLLER LOGIN KHUSUS ADMIN ---
+const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const ipAddress =
+      req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    const userAgent = req.headers["user-agent"];
 
     if (!email || !password) {
       return res.status(400).json({
@@ -11,14 +48,19 @@ const login = async (req, res) => {
       });
     }
 
-    const result = await authService.loginService(email, password);
+    const result = await authService.loginAdminService(
+      email,
+      password,
+      ipAddress,
+      userAgent,
+    );
     return res.status(200).json({
       status: "success",
-      message: "Login berhasil.",
+      message: "Login Admin berhasil.",
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(401).json({
       status: "error",
       message: error.message,
     });
@@ -85,6 +127,7 @@ const updateProfile = async (req, res) => {
 
 module.exports = {
   login,
+  loginAdmin,
   registerSiswa,
   updateProfile,
   getMe,
