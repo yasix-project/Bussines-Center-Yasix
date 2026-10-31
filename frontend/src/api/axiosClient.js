@@ -24,8 +24,14 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = "/login";
+      // PERBAIKAN: Cek apakah error berasal dari proses login
+      const isLoginRequest = error.config?.url?.includes("/login");
+
+      // Jika BUKAN proses login, baru lakukan redirect
+      if (!isLoginRequest) {
+        useAuthStore.getState().logout();
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },

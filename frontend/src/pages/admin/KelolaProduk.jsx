@@ -225,8 +225,7 @@ export default function KelolaProduk() {
             Kelola Inventaris & Produk
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Manajemen stok, kalkulasi margin, dan pemantauan aset Business
-            Center Yasix
+            Manajemen stok, kalkulasi margin, dan pemantauan aset Yasix Merch
           </p>
         </div>
 

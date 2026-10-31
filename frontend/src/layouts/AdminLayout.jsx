@@ -24,7 +24,9 @@ export default function AdminLayout() {
   const navigationGroups = [
     {
       title: "UTAMA",
-      items: [{ name: "Dashboard", path: "/admin", icon: LayoutDashboard }],
+      items: [
+        { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
+      ],
     },
     {
       title: "SISTEM & OPERASIONAL",
