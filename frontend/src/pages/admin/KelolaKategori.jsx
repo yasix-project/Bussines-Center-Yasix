@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit3, Trash2, FolderTree } from "lucide-react";
 
 import Button from "../../components/ui/Button";
@@ -10,11 +9,10 @@ import StatCard from "../../components/admin/StatCard";
 import CategoryTypeModal from "../../components/admin/CategoryTypeModal";
 import CategoryFormModal from "../../components/admin/CategoryFormModal";
 
-import { categoryService } from "../../api/categoryService";
+import { useCategories, useCategoryMutations } from "../../hooks/useCategories";
 import { formatDate } from "../../utils/formatters";
 
 export default function KelolaKategori() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -31,54 +29,24 @@ export default function KelolaKategori() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      const response = await categoryService.getAll();
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : response.data || [];
-    },
-  });
+  } = useCategories();
 
   // 2. Mutations
-  const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editingCategory
-        ? categoryService.update(editingCategory.id, data)
-        : categoryService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      setIsFormModalOpen(false);
-      setEditingCategory(null);
-    },
-    onError: (err) =>
-      alert(err.response?.data?.message || "Gagal menyimpan kategori."),
-  });
+  const { save, remove, bulkRemove } = useCategoryMutations();
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => categoryService.delete(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    },
-    onError: (err) =>
-      alert(
-        err.response?.data?.message ||
-          "Gagal menghapus kategori. Pastikan tidak ada produk di dalamnya.",
-      ),
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids) => {
-      await Promise.all(ids.map((id) => categoryService.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      setSelectedIds([]);
-    },
-    onError: () => alert("Gagal menghapus beberapa kategori."),
-  });
+  const handleSave = (data) => {
+    save.mutate(
+      { id: editingCategory?.id, data },
+      {
+        onSuccess: () => {
+          setIsFormModalOpen(false);
+          setEditingCategory(null);
+        },
+        onError: (err) =>
+          alert(err.response?.data?.message || "Gagal menyimpan kategori."),
+      },
+    );
+  };
 
   // 3. Handlers
   const handleAddNewCategory = () => {
@@ -157,7 +125,17 @@ export default function KelolaKategori() {
           <button
             onClick={() => {
               if (window.confirm("Yakin ingin menghapus kategori ini?"))
-                deleteMutation.mutate(cat.id);
+                remove.mutate(cat.id, {
+                  onSuccess: () =>
+                    setSelectedIds((prev) =>
+                      prev.filter((item) => item !== cat.id),
+                    ),
+                  onError: (err) =>
+                    alert(
+                      err.response?.data?.message ||
+                        "Gagal menghapus kategori. Pastikan tidak ada produk di dalamnya.",
+                    ),
+                });
             }}
             className="p-1.5 text-slate-400 hover:text-danger hover:bg-danger/10 rounded transition-colors"
             title="Hapus"
@@ -206,7 +184,7 @@ export default function KelolaKategori() {
         keyField="id"
         isLoading={isLoading}
         isError={isError}
-        errorMessage={error?.message}
+        errorMessage={error?.response?.data?.message || error?.message}
         emptyMessage="Tidak ada kategori ditemukan."
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
@@ -227,10 +205,18 @@ export default function KelolaKategori() {
                 `Yakin ingin menghapus ${selectedIds.length} kategori terpilih?`,
               )
             ) {
-              bulkDeleteMutation.mutate(selectedIds);
+              bulkRemove.mutate(selectedIds, {
+                onSuccess: (failedIds) => {
+                  setSelectedIds(failedIds);
+                  if (failedIds.length > 0) {
+                    alert(`${failedIds.length} kategori gagal dihapus.`);
+                  }
+                },
+                onError: () => alert("Gagal menghapus beberapa kategori."),
+              });
             }
           }}
-          isLoading={bulkDeleteMutation.isPending}
+          isLoading={bulkRemove.isPending}
           className="shadow-red-900/30 focus-visible:ring-red-300 active:scale-95"
         >
           <Trash2 size={14} /> Hapus Massal
@@ -248,9 +234,10 @@ export default function KelolaKategori() {
       <CategoryFormModal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        onSubmitData={saveMutation.mutate}
+        onSubmitData={handleSave}
         initialData={editingCategory}
         selectedType={selectedCategoryType}
+        isSubmitting={save.isPending}
       />
     </div>
   );

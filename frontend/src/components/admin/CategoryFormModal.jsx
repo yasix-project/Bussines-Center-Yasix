@@ -26,12 +26,13 @@ export default function CategoryFormModal({
   onSubmitData,
   initialData = null,
   selectedType = "LAINNYA", // Terima tipe dari Modal 1
+  isSubmitting = false,
 }) {
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm({
     resolver: zodResolver(categorySchema),
   });
@@ -99,7 +100,10 @@ export default function CategoryFormModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isFormSubmitting || isSubmitting}
+          >
             Simpan Kategori
           </Button>
         </div>
