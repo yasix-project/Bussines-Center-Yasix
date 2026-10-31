@@ -43,4 +43,11 @@ router.patch(
   transactionController.completePreOrder,
 );
 
+router.patch(
+  "/:id/cancel",
+  verifyToken,
+  checkRole("ADMIN", "KASIR"),
+  transactionController.cancelTransaction,
+);
+
 module.exports = router;

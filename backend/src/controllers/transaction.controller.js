@@ -98,10 +98,35 @@ const completePreOrder = async (req, res) => {
   }
 };
 
+const cancelTransaction = async (req, res) => {
+  try {
+    const transactionId = req.params.id;
+    const user = req.user; // Data kasir/admin yang sedang login
+
+    const result = await transactionService.cancelTransactionService(
+      transactionId,
+      user,
+    );
+
+    return res.status(200).json({
+      status: "success",
+      message:
+        "Transaksi berhasil dibatalkan dan stok produk telah dikembalikan.",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      status: "error",
+      message: error.message || "Gagal membatalkan transaksi.",
+    });
+  }
+};
+
 module.exports = {
   createTransaction,
   getAllTransactions,
   getTransactionById,
   completePreOrder,
   studentPreOrder,
+  cancelTransaction,
 };

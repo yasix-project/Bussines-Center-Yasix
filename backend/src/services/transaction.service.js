@@ -155,7 +155,7 @@ const createTransactionService = async (cashierId, transactionData) => {
   });
 };
 
-// Mendapatkan Semua Riwayat Transaksi (Kasir & Admin)
+// --- PERBAIKAN 1: GET ALL TRANSACTIONS DENGAN PRINT ORDER ---
 const getAllTransactionsService = async () => {
   return await prisma.transaction.findMany({
     include: {
@@ -165,13 +165,21 @@ const getAllTransactionsService = async () => {
       student: {
         select: { id: true, name: true, nis: true },
       },
-      items: true,
+      items: {
+        include: {
+          product: {
+            select: { name: true, barcode: true },
+          },
+          // INCLUDE PRINT ORDER DI SINI
+          printOrder: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
 };
 
-// Mendapatkan Detail Transaksi Spesifik (Untuk Struk / Nota)
+// --- PERBAIKAN 2: GET TRANSACTION BY ID DENGAN PRINT ORDER ---
 const getTransactionByIdService = async (transactionId) => {
   const transaction = await prisma.transaction.findUnique({
     where: { id: transactionId },
@@ -187,6 +195,8 @@ const getTransactionByIdService = async (transactionId) => {
           product: {
             select: { name: true, barcode: true },
           },
+          // INCLUDE PRINT ORDER DI SINI
+          printOrder: true,
         },
       },
       voucher: true,
@@ -198,6 +208,73 @@ const getTransactionByIdService = async (transactionId) => {
   }
 
   return transaction;
+};
+
+// --- PERBAIKAN 3: LOGIKA CANCEL TRANSACTION YANG BENAR ---
+const cancelTransactionService = async (transactionId, user) => {
+  // 1. Ubah `prisma.order` menjadi `prisma.transaction`
+  const existingTransaction = await prisma.transaction.findUnique({
+    where: { id: transactionId },
+    include: {
+      items: {
+        include: {
+          printOrder: true, // Sertakan printOrder untuk dibatalkan jika ada
+        },
+      },
+    },
+  });
+
+  if (!existingTransaction) {
+    throw new Error("Data transaksi tidak ditemukan.");
+  }
+
+  // 2. Validasi Status
+  if (
+    existingTransaction.status === "COMPLETED" ||
+    existingTransaction.status === "CANCELLED"
+  ) {
+    throw new Error(
+      `Transaksi tidak dapat dibatalkan karena berstatus ${existingTransaction.status}.`,
+    );
+  }
+
+  // 3. Eksekusi Pembatalan
+  const result = await prisma.$transaction(async (tx) => {
+    // A. Ubah `tx.order` menjadi `tx.transaction`
+    const cancelledTransaction = await tx.transaction.update({
+      where: { id: transactionId },
+      data: {
+        status: "CANCELLED",
+      },
+    });
+
+    // B. Lakukan perulangan untuk setiap item
+    for (const item of existingTransaction.items) {
+      // Jika item berupa Produk Fisik, kembalikan stok
+      if (item.productId) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { increment: item.quantity },
+          },
+        });
+      }
+
+      // Jika item berupa Jasa Print, batalkan status PrintOrder tersebut
+      if (item.printOrderId) {
+        await tx.printOrder.update({
+          where: { id: item.printOrderId },
+          data: {
+            status: "CANCELLED",
+          },
+        });
+      }
+    }
+
+    return cancelledTransaction;
+  });
+
+  return result;
 };
 
 // Pre-Order Mandiri Siswa (Timeout 1 Jam)
@@ -377,6 +454,7 @@ module.exports = {
   createTransactionService,
   getAllTransactionsService,
   getTransactionByIdService,
+  cancelTransactionService,
   studentPreOrderService,
   checkAndCancelExpiredOrders,
   completePreOrderService,
